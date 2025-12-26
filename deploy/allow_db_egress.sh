@@ -181,20 +181,67 @@ while IFS= read -r line; do
     HOST=$(echo "$line" | cut -d':' -f1)
     PORT=$(echo "$line" | cut -d':' -f2)
     
-    # Vérifier si la règle existe déjà
-    if ufw status | grep -q "$PORT.*ALLOW OUT.*Anywhere"; then
-        print_warning "Règle déjà existante pour le port $PORT"
-        ((SKIPPED++))
-        continue
-    fi
-    
-    # Ajouter la règle UFW
-    if ufw allow out to any port "$PORT" proto tcp comment "MySQL $HOST" > /dev/null 2>&1; then
-        print_success "Autorisé: $HOST:$PORT"
-        ((ADDED++))
+    # Vérifier si c'est une IP ou un hostname
+    if [[ "$HOST" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+        # C'est une IP - Ajouter directement
+        if ufw status | grep -q "$HOST.*$PORT"; then
+            print_warning "Règle déjà existante pour $HOST:$PORT"
+            ((SKIPPED++))
+        else
+            if ufw allow out to "$HOST" port "$PORT" proto tcp comment "MySQL $HOST" > /dev/null 2>&1; then
+                print_success "Autorisé: $HOST:$PORT"
+                ((ADDED++))
+            else
+                print_error "Échec: $HOST:$PORT"
+                ((FAILED++))
+            fi
+        fi
     else
-        print_error "Échec: $HOST:$PORT"
-        ((FAILED++))
+        # C'est un hostname - Résoudre en IP d'abord
+        print_info "Résolution de $HOST..."
+        RESOLVED_IP=$(host "$HOST" 2>/dev/null | grep "has address" | head -1 | awk '{print $4}')
+        
+        if [[ -n "$RESOLVED_IP" ]]; then
+            print_success "  → $HOST résolu en $RESOLVED_IP"
+            
+            # Ajouter règle avec l'IP
+            if ! ufw status | grep -q "$RESOLVED_IP.*$PORT"; then
+                if ufw allow out to "$RESOLVED_IP" port "$PORT" proto tcp comment "MySQL $HOST (IP)" > /dev/null 2>&1; then
+                    print_success "  → Règle IP ajoutée: $RESOLVED_IP:$PORT"
+                    ((ADDED++))
+                else
+                    print_error "  → Échec règle IP: $RESOLVED_IP:$PORT"
+                    ((FAILED++))
+                fi
+            else
+                print_warning "  → Règle IP déjà existante"
+                ((SKIPPED++))
+            fi
+            
+            # Ajouter aussi règle avec hostname (au cas où l'IP change)
+            if ! ufw status | grep -q "$HOST.*$PORT"; then
+                if ufw allow out to "$HOST" port "$PORT" proto tcp comment "MySQL $HOST (hostname)" > /dev/null 2>&1; then
+                    print_success "  → Règle hostname ajoutée: $HOST:$PORT"
+                else
+                    print_warning "  → Règle hostname non ajoutée (peut-être non supportée)"
+                fi
+            fi
+        else
+            # Impossible de résoudre - Essayer quand même avec le hostname
+            print_warning "Impossible de résoudre $HOST, tentative avec hostname..."
+            if ! ufw status | grep -q "$HOST.*$PORT"; then
+                if ufw allow out to "$HOST" port "$PORT" proto tcp comment "MySQL $HOST" > /dev/null 2>&1; then
+                    print_success "Autorisé: $HOST:$PORT"
+                    ((ADDED++))
+                else
+                    print_error "Échec: $HOST:$PORT"
+                    ((FAILED++))
+                fi
+            else
+                print_warning "Règle déjà existante pour $HOST:$PORT"
+                ((SKIPPED++))
+            fi
+        fi
     fi
 done <<< "$DB_HOSTS"
 
