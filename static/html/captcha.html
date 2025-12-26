@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vérification de sécurité - {{ site_name }}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/captcha.css') }}?v={{ ASSET_VERSION }}">
+</head>
+<body>
+    <div class="bg-grid"></div>
+    <div class="bg-glow"></div>
+    
+    <div class="container">
+        <div class="captcha-card animate__animated animate__fadeIn">
+            <div class="shield-icon">
+                <i class="fas fa-shield-halved"></i>
+                <div class="shield-pulse"></div>
+            </div>
+            
+            <div class="logo-container">
+                <div class="logo-voltre">
+                    <span class="logo-vol">VOL</span><span class="logo-tre">TRE</span>
+                </div>
+            </div>
+            
+            <h1>Vérification de sécurité</h1>
+            <p class="description">
+                Pour accéder au panel de gestion, veuillez compléter la vérification ci-dessous.
+            </p>
+            
+            <div class="security-badge">
+                <i class="fas fa-lock"></i>
+                <span>Protection Cloudflare Turnstile</span>
+            </div>
+            
+            <div id="turnstile-container" class="turnstile-container" data-sitekey="{{ turnstile_site_key }}"></div>
+            
+            <div class="turnstile-feedback" id="turnstile-feedback"></div>
+            
+            <button type="button" class="access-btn" id="access-btn" disabled>
+                <span class="btn-text">
+                    <i class="fas fa-arrow-right"></i>
+                    Accéder au panel
+                </span>
+                <span class="btn-loading">
+                    <i class="fas fa-circle-notch fa-spin"></i>
+                    Vérification...
+                </span>
+            </button>
+            
+            <div class="footer-info">
+                <i class="fas fa-info-circle"></i>
+                <span>Cette vérification protège le panel contre les accès automatisés.</span>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // Configuration Turnstile
+        window.turnstileConfig = {
+            verifyUrl: "{{ url_for('verify_turnstile_entry') }}",
+            redirectUrl: "{{ url_for('index') }}",
+            messages: {
+                missing: "Veuillez compléter la vérification de sécurité.",
+                expired: "La vérification a expiré, veuillez recommencer.",
+                error: "Erreur lors de la vérification. Veuillez réessayer.",
+                success: "Vérification réussie ! Redirection..."
+            }
+        };
+        
+        // Callback Turnstile
+        window.onTurnstileLoad = function() {
+            if (window.initTurnstile && typeof window.initTurnstile === 'function') {
+                window.initTurnstile();
+            }
+        };
+    </script>
+    <script src="https://challenges.cloudflare.com/turnstile/v0/api.js?onload=onTurnstileLoad&render=explicit" async defer></script>
+    <script src="{{ url_for('static', filename='js/captcha.js') }}?v={{ ASSET_VERSION }}"></script>
+</body>
+</html>
+

@@ -1,0 +1,91 @@
+# =============================================================================
+# Configuration Cloudflare Tunnel pour Panel Logs VOLTRE
+# =============================================================================
+# 
+# INSTRUCTIONS D'INSTALLATION :
+# 
+# 1. Installez cloudflared :
+#    curl -L https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64 -o /usr/local/bin/cloudflared
+#    chmod +x /usr/local/bin/cloudflared
+#
+# 2. Authentifiez-vous :
+#    cloudflared tunnel login
+#
+# 3. Créez le tunnel :
+#    cloudflared tunnel create logspanel
+#
+# 4. Notez l'ID du tunnel (affiché après la création)
+#    Le fichier de credentials sera créé dans ~/.cloudflared/<TUNNEL_ID>.json
+#
+# 5. Copiez ce fichier vers /etc/cloudflared/config.yml
+#    sudo mkdir -p /etc/cloudflared
+#    sudo cp cloudflared.yml /etc/cloudflared/config.yml
+#
+# 6. Modifiez les valeurs ci-dessous :
+#    - tunnel: Remplacez par votre TUNNEL_ID
+#    - credentials-file: Chemin vers le fichier JSON
+#    - hostname: Votre domaine
+#
+# 7. Configurez le DNS sur Cloudflare :
+#    cloudflared tunnel route dns logspanel votre-domaine.com
+#
+# 8. Installez le service :
+#    sudo cloudflared service install
+#
+# =============================================================================
+
+# ID du tunnel (remplacez par le vôtre)
+tunnel: VOTRE_TUNNEL_ID
+
+# Fichier de credentials (généré lors de la création du tunnel)
+credentials-file: /etc/cloudflared/credentials.json
+
+# Configuration des ingress (routes)
+ingress:
+  # Route principale - Panel Logs
+  - hostname: votre-domaine.com
+    service: http://localhost:3001
+    originRequest:
+      # Timeouts optimisés
+      connectTimeout: 30s
+      tlsTimeout: 30s
+      tcpKeepAlive: 30s
+      noHappyEyeballs: false
+      keepAliveConnections: 100
+      keepAliveTimeout: 90s
+      # HTTP/2 vers l'origine (si supporté par Gunicorn)
+      http2Origin: false
+      # Headers de proxy
+      originServerName: ""
+      # Pas de vérification TLS locale (localhost)
+      noTLSVerify: true
+
+  # Route pour www (redirection vers le domaine principal)
+  - hostname: www.votre-domaine.com
+    service: http://localhost:3001
+    originRequest:
+      connectTimeout: 30s
+      noTLSVerify: true
+
+  # Catch-all : retourne 404 pour les autres requêtes
+  - service: http_status:404
+
+# =============================================================================
+# Configuration avancée (optionnel)
+# =============================================================================
+
+# Métriques Prometheus (décommentez pour activer)
+# metrics: localhost:9090
+
+# Logs
+# loglevel: info
+# logDirectory: /var/log/cloudflared
+
+# Grace period pour l'arrêt propre
+# grace-period: 30s
+
+# Retries
+# retries: 5
+
+# Protocol (auto, http2, quic)
+# protocol: auto

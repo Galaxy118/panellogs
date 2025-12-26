@@ -1,0 +1,14 @@
+[Unit]
+Description=Surveillance du fichier servers_config.json pour synchronisation firewall
+Documentation=https://github.com/votre-projet
+
+[Path]
+# Surveiller le fichier servers_config.json
+PathModified=/var/www/logspanel/servers_config.json
+# Délai pour regrouper les modifications rapides
+TriggerLimitIntervalSec=10s
+TriggerLimitBurst=1
+Unit=firewall-sync.service
+
+[Install]
+WantedBy=multi-user.target

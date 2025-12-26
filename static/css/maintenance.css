@@ -1,0 +1,152 @@
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    padding: 0;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #0a0f0d;
+    font-family: 'Inter', 'Segoe UI', sans-serif;
+}
+
+.maintenance-container {
+    max-width: 800px;
+    width: 90%;
+    margin: 20px auto;
+    padding: 40px;
+    text-align: center;
+    background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
+    color: white;
+    border-radius: 15px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+}
+
+.maintenance-icon {
+    font-size: 80px;
+    margin-bottom: 20px;
+    opacity: 0.9;
+}
+
+.maintenance-title {
+    font-size: 32px;
+    margin-bottom: 15px;
+    font-weight: bold;
+}
+
+.maintenance-message {
+    font-size: 18px;
+    margin-bottom: 30px;
+    opacity: 0.9;
+    line-height: 1.6;
+}
+
+.maintenance-details {
+    background: rgba(255, 255, 255, 0.1);
+    padding: 20px;
+    border-radius: 10px;
+    margin: 20px 0;
+}
+
+.back-button {
+    display: inline-block;
+    background: rgba(255, 255, 255, 0.2);
+    color: white;
+    padding: 15px 30px;
+    border-radius: 8px;
+    text-decoration: none;
+    font-weight: bold;
+    transition: all 0.3s ease;
+    margin-top: 20px;
+}
+
+.back-button:hover {
+    background: rgba(255, 255, 255, 0.3);
+    transform: translateY(-2px);
+    color: white;
+}
+
+.status-info {
+    font-size: 14px;
+    opacity: 0.8;
+    margin-top: 20px;
+}
+
+/* Tablette */
+@media (max-width: 768px) {
+    .maintenance-container {
+        margin: 15px;
+        padding: 30px 20px;
+        width: calc(100% - 30px);
+    }
+    
+    .maintenance-icon {
+        font-size: 60px;
+        margin-bottom: 15px;
+    }
+    
+    .maintenance-title {
+        font-size: 24px;
+        margin-bottom: 12px;
+    }
+    
+    .maintenance-message {
+        font-size: 16px;
+        margin-bottom: 20px;
+    }
+    
+    .maintenance-details {
+        padding: 15px;
+        margin: 15px 0;
+    }
+    
+    .back-button {
+        padding: 12px 24px;
+        font-size: 14px;
+        width: 100%;
+    }
+}
+
+/* Mobile */
+@media (max-width: 480px) {
+    .maintenance-container {
+        margin: 10px;
+        padding: 25px 15px;
+        width: calc(100% - 20px);
+        border-radius: 12px;
+    }
+    
+    .maintenance-icon {
+        font-size: 50px;
+        margin-bottom: 12px;
+    }
+    
+    .maintenance-title {
+        font-size: 20px;
+        margin-bottom: 10px;
+    }
+    
+    .maintenance-message {
+        font-size: 14px;
+        margin-bottom: 15px;
+        line-height: 1.5;
+    }
+    
+    .maintenance-details {
+        padding: 12px;
+        margin: 12px 0;
+        font-size: 14px;
+    }
+    
+    .back-button {
+        padding: 10px 20px;
+        font-size: 13px;
+    }
+    
+    .status-info {
+        font-size: 12px;
+    }
+}

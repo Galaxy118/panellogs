@@ -1,0 +1,208 @@
+:root {
+    --bg-color: #0a0f0d;
+    --card-bg: #141a17;
+    --darker-bg: #0d1210;
+    --text-color: #ffffff;
+    --accent-color: #8D12AB;
+    --hover-color: #af20d3ff;
+    --border-color: #1a231e;
+    --hover-bg: rgba(141,18,171,0.05);
+    --error-color: #ff4444;
+    --log-bg: #0d1210;
+    --log-hover-bg: #141a17;
+    --accent-gradient: linear-gradient(45deg, #af20d3ff, #8D12AB);
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    padding: 20px;
+}
+
+.container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    padding: 20px;
+    width: 100%;
+}
+
+.login-card {
+    background-color: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 15px;
+    padding: 2.5rem;
+    text-align: center;
+    max-width: 400px;
+    width: 100%;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+    margin: 0 auto;
+}
+
+.login-card h2 {
+    color: var(--accent-color);
+    margin-bottom: 1.5rem;
+    font-weight: 600;
+    font-size: 1.5rem;
+}
+
+.login-card p {
+    color: var(--text-color);
+    margin-bottom: 2rem;
+    opacity: 0.9;
+    font-size: 1rem;
+    line-height: 1.5;
+}
+
+.discord-btn {
+    background-color: #5865F2;
+    border: none;
+    padding: 1rem 2rem;
+    font-size: 1.1rem;
+    transition: all 0.3s ease;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    width: 100%;
+    border-radius: 10px;
+    color: white;
+    text-decoration: none;
+}
+
+.discord-btn:hover {
+    background-color: #4752c4;
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(88, 101, 242, 0.3);
+    color: white;
+    text-decoration: none;
+}
+
+.discord-btn.error {
+    background-color: #dc3545;
+}
+
+.discord-btn.error:hover {
+    background-color: #bb2d3b;
+    box-shadow: 0 5px 15px rgba(220, 53, 69, 0.3);
+}
+
+.logo-container {
+    margin-bottom: 2rem;
+    text-align: center;
+}
+
+.logo-container i {
+    font-size: 3rem;
+    color: var(--accent-color);
+}
+
+.site-logo {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    width: 50px;
+    height: 50px;
+    border-radius: 8px;
+}
+
+/* Tablette */
+@media (max-width: 768px) {
+    body {
+        padding: 15px;
+    }
+    
+    .container {
+        padding: 15px;
+    }
+    
+    .login-card {
+        padding: 2rem 1.5rem;
+        border-radius: 12px;
+    }
+    
+    .login-card h2 {
+        font-size: 1.35rem;
+        margin-bottom: 1.25rem;
+    }
+    
+    .login-card p {
+        font-size: 0.95rem;
+        margin-bottom: 1.5rem;
+    }
+    
+    .discord-btn {
+        padding: 0.875rem 1.5rem;
+        font-size: 1rem;
+    }
+    
+    .logo-container i {
+        font-size: 2.5rem;
+    }
+    
+    .site-logo {
+        width: 40px;
+        height: 40px;
+        top: 15px;
+        right: 15px;
+    }
+}
+
+/* Mobile */
+@media (max-width: 480px) {
+    body {
+        padding: 10px;
+    }
+    
+    .container {
+        padding: 10px;
+    }
+    
+    .login-card {
+        padding: 1.5rem 1rem;
+        border-radius: 10px;
+    }
+    
+    .login-card h2 {
+        font-size: 1.2rem;
+        margin-bottom: 1rem;
+    }
+    
+    .login-card p {
+        font-size: 0.9rem;
+        margin-bottom: 1.25rem;
+    }
+    
+    .discord-btn {
+        padding: 0.75rem 1.25rem;
+        font-size: 0.95rem;
+        gap: 8px;
+    }
+    
+    .logo-container {
+        margin-bottom: 1.5rem;
+    }
+    
+    .logo-container i {
+        font-size: 2.25rem;
+    }
+    
+    .site-logo {
+        width: 35px;
+        height: 35px;
+        top: 10px;
+        right: 10px;
+    }
+}

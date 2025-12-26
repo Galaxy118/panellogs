@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8" />
+    <title>Maintenance - {{ server|title }} - {{ site_name }}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/maintenance.css') }}?v={{ ASSET_VERSION }}" />
+</head>
+<body>
+    <div class="maintenance-container">
+        <div class="maintenance-icon">🔧</div>
+        <h1 class="maintenance-title">Serveur en Maintenance</h1>
+        
+        <div class="maintenance-message">
+            Le serveur <strong>{{ server|title }}</strong> est actuellement indisponible.
+            <br>
+            La base de données n'est pas accessible pour le moment.
+        </div>
+        
+        <div class="maintenance-details">
+            <h3>🔍 Détails techniques</h3>
+            <p>• Connexion à la base de données : <span style="color: #ffeb3b;">❌ Échec</span></p>
+            <p>• Statut du serveur : <span style="color: #ffeb3b;">🔴 Offline</span></p>
+            <p>• Vérification des tables : <span style="color: #ffeb3b;">❌ Inaccessible</span></p>
+        </div>
+        
+        <div class="maintenance-message">
+            Veuillez réessayer dans quelques minutes ou contactez l'administrateur si le problème persiste.
+        </div>
+        
+        <a href="{{ url_for('index') }}" class="back-button">
+            ← Retour à la sélection des serveurs
+        </a>
+        
+        <div class="status-info">
+            Dernière vérification : {{ moment().format('DD/MM/YYYY à HH:mm:ss') if moment else 'En cours...' }}
+        </div>
+    </div>
+    
+    <script src="{{ url_for('static', filename='js/maintenance.js') }}?v={{ ASSET_VERSION }}"></script>
+</body>
+</html>

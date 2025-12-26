@@ -1,0 +1,51 @@
+# =============================================================================
+# Service Systemd pour Cloudflare Tunnel
+# Panel Logs VOLTRE - Ubuntu 24.04
+# =============================================================================
+#
+# NOTE: Ce fichier est fourni à titre de référence.
+# La commande `cloudflared service install` crée automatiquement ce service.
+#
+# Si vous devez le créer manuellement :
+# 1. Copiez vers /etc/systemd/system/cloudflared.service
+# 2. sudo systemctl daemon-reload
+# 3. sudo systemctl enable cloudflared
+# 4. sudo systemctl start cloudflared
+#
+# =============================================================================
+
+[Unit]
+Description=Cloudflare Tunnel for Panel Logs VOLTRE
+Documentation=https://developers.cloudflare.com/cloudflare-one/connections/connect-apps
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+# Utilisateur système
+User=root
+Group=root
+
+# Type de service
+Type=notify
+TimeoutStartSec=0
+
+# Commande de démarrage
+ExecStart=/usr/local/bin/cloudflared tunnel --config /etc/cloudflared/config.yml run
+
+# Arrêt propre
+ExecStop=/bin/kill -s TERM $MAINPID
+TimeoutStopSec=30
+
+# Redémarrage automatique
+Restart=always
+RestartSec=5
+StartLimitIntervalSec=60
+StartLimitBurst=5
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=cloudflared
+
+[Install]
+WantedBy=multi-user.target

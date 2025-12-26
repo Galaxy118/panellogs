@@ -1,0 +1,93 @@
+# =============================================================================
+# SÉCURITÉ: Fichiers sensibles à ne JAMAIS commiter
+# =============================================================================
+
+# Fichiers de configuration avec credentials
+.env
+.env.local
+.env.production
+.env.*.local
+servers_config.json
+
+# Credentials Cloudflare Tunnel
+/etc/cloudflared/
+*.json
+!servers_config.json.example
+!package.json
+
+# Base de données locale
+instance/
+*.db
+*.sqlite
+*.sqlite3
+
+# Logs
+*.log
+logs/
+
+# =============================================================================
+# Python
+# =============================================================================
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Environnement virtuel
+venv/
+ENV/
+env/
+.venv/
+
+# =============================================================================
+# IDE et éditeurs
+# =============================================================================
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# =============================================================================
+# Fichiers temporaires
+# =============================================================================
+*.tmp
+*.temp
+*.bak
+*.backup
+/tmp/
+
+# =============================================================================
+# Fichiers de déploiement spécifiques
+# =============================================================================
+gunicorn_logspanel.pid
+/tmp/gunicorn_logspanel.pid
+
+# Certificats SSL (si générés localement)
+*.pem
+*.key
+*.crt
+
+# =============================================================================
+# Anciens fichiers de configuration (nginx non utilisé avec Cloudflare Tunnels)
+# =============================================================================
+default
+nginx.conf

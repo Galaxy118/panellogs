@@ -1,0 +1,31 @@
+{
+  "servers": {
+    "exemple_serveur": {
+      "display_name": "Mon Serveur RP",
+      "description": "Description de votre serveur",
+      "logo": "/static/logos/exemple_serveur.png",
+      "status": "offline",
+      "database_uri": "mysql+pymysql://UTILISATEUR:MOT_DE_PASSE@HOST:PORT/DATABASE",
+      "discord": {
+        "guild_id": "ID_DU_SERVEUR_DISCORD",
+        "role_id_staff": "ID_DU_ROLE_STAFF",
+        "role_id_admin": "ID_DU_ROLE_ADMIN",
+        "channel_id": "ID_DU_SALON_LOGS"
+      },
+      "api": {
+        "tokens": ["TOKEN_API_POUR_ENVOI_LOGS"],
+        "allowed_ips": ["127.0.0.1", "IP_DE_VOTRE_SERVEUR_FIVEM"]
+      },
+      "db_accessible": false
+    }
+  },
+  "discord_servers": {
+    "ID_DU_SERVEUR_DISCORD": {
+      "enabled": true,
+      "name": "Mon Serveur Discord",
+      "user_role_id": "ID_DU_ROLE_UTILISATEUR",
+      "admin_role_id": "ID_DU_ROLE_ADMIN",
+      "log_servers": ["exemple_serveur"]
+    }
+  }
+}

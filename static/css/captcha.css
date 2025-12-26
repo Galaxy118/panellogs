@@ -1,0 +1,441 @@
+:root {
+    --bg-color: #050808;
+    --card-bg: #0c1211;
+    --card-border: #162320;
+    --text-color: #e8f0ef;
+    --text-muted: #6b8a84;
+    --accent-color: #8D12AB;
+    --accent-light: #af20d3;
+    --accent-glow: rgba(141, 18, 171, 0.4);
+    --success-color: #22c55e;
+    --error-color: #ef4444;
+    --accent-gradient: linear-gradient(135deg, #af20d3 0%, #8D12AB 50%, #6a0d82 100%);
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Space Grotesk', system-ui, sans-serif;
+    padding: 20px;
+    position: relative;
+    overflow: hidden;
+}
+
+/* Animated grid background */
+.bg-grid {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-image: 
+        linear-gradient(rgba(141, 18, 171, 0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(141, 18, 171, 0.03) 1px, transparent 1px);
+    background-size: 50px 50px;
+    animation: gridMove 20s linear infinite;
+    pointer-events: none;
+    z-index: 0;
+}
+
+@keyframes gridMove {
+    0% { transform: translate(0, 0); }
+    100% { transform: translate(50px, 50px); }
+}
+
+/* Glowing orb effect */
+.bg-glow {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 600px;
+    height: 600px;
+    background: radial-gradient(circle, var(--accent-glow) 0%, transparent 70%);
+    opacity: 0.3;
+    pointer-events: none;
+    z-index: 0;
+    animation: glowPulse 4s ease-in-out infinite;
+}
+
+@keyframes glowPulse {
+    0%, 100% { opacity: 0.2; transform: translate(-50%, -50%) scale(1); }
+    50% { opacity: 0.35; transform: translate(-50%, -50%) scale(1.1); }
+}
+
+.container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    width: 100%;
+    max-width: 480px;
+    position: relative;
+    z-index: 1;
+}
+
+.captcha-card {
+    background: linear-gradient(145deg, var(--card-bg) 0%, rgba(12, 18, 17, 0.95) 100%);
+    border: 1px solid var(--card-border);
+    border-radius: 24px;
+    padding: 3rem 2.5rem;
+    text-align: center;
+    width: 100%;
+    box-shadow: 
+        0 25px 50px -12px rgba(0, 0, 0, 0.5),
+        0 0 0 1px rgba(141, 18, 171, 0.1),
+        inset 0 1px 0 rgba(255, 255, 255, 0.03);
+    backdrop-filter: blur(10px);
+    position: relative;
+    overflow: hidden;
+}
+
+.captcha-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: var(--accent-gradient);
+    opacity: 0.8;
+}
+
+.shield-icon {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 80px;
+    height: 80px;
+    margin-bottom: 1.5rem;
+}
+
+.shield-icon i {
+    font-size: 3rem;
+    background: var(--accent-gradient);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    position: relative;
+    z-index: 2;
+}
+
+.shield-pulse {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    background: var(--accent-gradient);
+    opacity: 0.15;
+    animation: shieldPulse 2s ease-in-out infinite;
+}
+
+@keyframes shieldPulse {
+    0%, 100% { transform: translate(-50%, -50%) scale(1); opacity: 0.15; }
+    50% { transform: translate(-50%, -50%) scale(1.3); opacity: 0.05; }
+}
+
+.logo-container {
+    margin-bottom: 1.5rem;
+}
+
+.logo-voltre {
+    font-size: 2.5rem;
+    font-weight: 700;
+    letter-spacing: -1px;
+}
+
+.logo-vol {
+    background: var(--accent-gradient);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.logo-tre {
+    color: var(--text-color);
+}
+
+.captcha-card h1 {
+    font-size: 1.75rem;
+    font-weight: 600;
+    margin-bottom: 0.75rem;
+    color: var(--text-color);
+}
+
+.description {
+    color: var(--text-muted);
+    font-size: 1rem;
+    line-height: 1.6;
+    margin-bottom: 2rem;
+    max-width: 320px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.security-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    background: rgba(141, 18, 171, 0.1);
+    border: 1px solid rgba(141, 18, 171, 0.2);
+    border-radius: 50px;
+    font-size: 0.85rem;
+    color: var(--accent-light);
+    margin-bottom: 1.5rem;
+}
+
+.security-badge i {
+    font-size: 0.9rem;
+}
+
+.turnstile-container {
+    display: flex;
+    justify-content: center;
+    margin: 1.5rem 0;
+    min-height: 65px;
+}
+
+.turnstile-feedback {
+    min-height: 1.5rem;
+    font-size: 0.9rem;
+    font-weight: 500;
+    margin-bottom: 1.5rem;
+    transition: all 0.3s ease;
+}
+
+.turnstile-feedback.error {
+    color: var(--error-color);
+}
+
+.turnstile-feedback.success {
+    color: var(--success-color);
+}
+
+.access-btn {
+    width: 100%;
+    padding: 1rem 2rem;
+    font-size: 1.1rem;
+    font-weight: 600;
+    font-family: inherit;
+    border: none;
+    border-radius: 14px;
+    background: var(--accent-gradient);
+    color: white;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 20px var(--accent-glow);
+    position: relative;
+    overflow: hidden;
+}
+
+.access-btn::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+    transition: left 0.5s ease;
+}
+
+.access-btn:not(:disabled):hover::before {
+    left: 100%;
+}
+
+.access-btn:not(:disabled):hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 30px var(--accent-glow);
+}
+
+.access-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    box-shadow: none;
+}
+
+.access-btn .btn-text {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+}
+
+.access-btn .btn-loading {
+    display: none;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+}
+
+.access-btn.loading .btn-text {
+    display: none;
+}
+
+.access-btn.loading .btn-loading {
+    display: flex;
+}
+
+.footer-info {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    margin-top: 2rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--card-border);
+    font-size: 0.8rem;
+    color: var(--text-muted);
+}
+
+.footer-info i {
+    opacity: 0.7;
+}
+
+/* Responsive - Tablette */
+@media (max-width: 768px) {
+    body {
+        padding: 15px;
+    }
+    
+    .container {
+        max-width: 100%;
+        padding: 0;
+    }
+    
+    .captcha-card {
+        padding: 2.5rem 2rem;
+        border-radius: 20px;
+    }
+    
+    .shield-icon {
+        width: 70px;
+        height: 70px;
+    }
+    
+    .shield-icon i {
+        font-size: 2.75rem;
+    }
+    
+    .logo-voltre {
+        font-size: 2.25rem;
+    }
+    
+    .captcha-card h1 {
+        font-size: 1.6rem;
+    }
+    
+    .description {
+        font-size: 0.95rem;
+    }
+    
+    .security-badge {
+        padding: 0.4rem 0.9rem;
+        font-size: 0.8rem;
+    }
+    
+    .turnstile-container {
+        transform: scale(0.95);
+        transform-origin: center;
+    }
+    
+    .access-btn {
+        padding: 0.9rem 1.75rem;
+        font-size: 1.05rem;
+    }
+    
+    .footer-info {
+        flex-direction: column;
+        text-align: center;
+        gap: 0.25rem;
+    }
+}
+
+/* Responsive - Mobile */
+@media (max-width: 480px) {
+    body {
+        padding: 10px;
+    }
+    
+    .captcha-card {
+        padding: 1.75rem 1.25rem;
+        border-radius: 16px;
+    }
+    
+    .shield-icon {
+        width: 55px;
+        height: 55px;
+        margin-bottom: 1rem;
+    }
+    
+    .shield-icon i {
+        font-size: 2.25rem;
+    }
+    
+    .logo-container {
+        margin-bottom: 1rem;
+    }
+    
+    .logo-voltre {
+        font-size: 1.75rem;
+    }
+    
+    .captcha-card h1 {
+        font-size: 1.35rem;
+        margin-bottom: 0.5rem;
+    }
+    
+    .description {
+        font-size: 0.85rem;
+        margin-bottom: 1.5rem;
+    }
+    
+    .security-badge {
+        padding: 0.35rem 0.75rem;
+        font-size: 0.75rem;
+        margin-bottom: 1rem;
+    }
+    
+    .turnstile-container {
+        transform: scale(0.9);
+        margin: 1rem 0;
+    }
+    
+    .turnstile-feedback {
+        font-size: 0.8rem;
+        margin-bottom: 1rem;
+    }
+    
+    .access-btn {
+        padding: 0.75rem 1.25rem;
+        font-size: 0.95rem;
+        border-radius: 12px;
+    }
+    
+    .access-btn .btn-text,
+    .access-btn .btn-loading {
+        gap: 0.5rem;
+    }
+    
+    .footer-info {
+        margin-top: 1.5rem;
+        padding-top: 1rem;
+        font-size: 0.7rem;
+    }
+}
+

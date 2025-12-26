@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <title>Panel de Gestion Serveur - {{ site_name }}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/server_selection.css') }}?v={{ ASSET_VERSION }}">
+</head>
+<body>
+    {% if error_message %}
+    <div class="error-alert" id="errorAlert">
+        <i class="fas fa-exclamation-triangle"></i>
+        <span>{{ error_message }}</span>
+        <button class="close-btn" onclick="document.getElementById('errorAlert').style.display='none'">
+            <i class="fas fa-times"></i>
+        </button>
+    </div>
+    {% endif %}
+    <div class="container">
+        <div class="header-top">
+            {% if user_data %}
+            <div class="user-profile animate__animated animate__fadeInRight">
+                <img src="{{ user_data.avatar_url }}" alt="Avatar" class="user-avatar">
+                <div class="user-info">
+                    <span class="username">{{ user_data.username }}</span>
+                    {% if is_super_admin %}
+                    <a href="{{ url_for('admin_servers') }}" class="admin-link">
+                        <i class="fas fa-cogs"></i> Administration
+                    </a>
+                    {% else %}
+<a href="{{ url_for('account') }}" class="profile-link">
+                        <i class="fas fa-user"></i> Mon Compte
+                    </a>
+                    {% endif %}
+                </div>
+                <a href="{{ url_for('logout') }}" class="logout-btn" title="Déconnexion">
+                    <i class="fas fa-sign-out-alt"></i>
+                </a>
+            </div>
+            {% else %}
+            <a href="{{ url_for('login') }}" class="admin-btn animate__animated animate__fadeInRight">
+                <i class="fab fa-discord"></i>
+                <span>Se connecter</span>
+            </a>
+            {% endif %}
+        </div>
+        
+        <div class="header animate__animated animate__fadeInDown">
+            <div class="logo-container">
+                <div class="logo-voltre">
+                    <span class="logo-vol">VOL</span><span class="logo-tre">TRE</span>
+                </div>
+            </div>
+            <h1><i class="fas fa-server"></i> Panel de Gestion Serveur</h1>
+            <p>Sélectionnez un serveur pour accéder à ses logs et fonctionnalités</p>
+        </div>
+        
+        <div class="servers-list">
+            {% for server_id, server in servers.items() %}
+            <div class="server-item animate__animated animate__fadeInUp {{ 'server-offline' if server.status == 'offline' else '' }}" 
+                 data-server-id="{{ server_id }}" 
+                 data-animation-delay="{{ loop.index0 * 0.1 }}"
+                 {% if server.status == 'online' %}data-href="{{ url_for('auth_page', server=server_id) }}"{% endif %}>
+                <div class="status-indicator {{ 'offline' if server.status == 'offline' else '' }}"></div>
+                
+                <div class="server-logo">
+                    {% if server.discord_icon %}
+                        <img src="{{ server.discord_icon }}" alt="{{ server.display_name }}" style="width: 80px; height: 80px; border-radius: 50%; object-fit: cover;">
+                    {% elif server.logo %}
+                        <img src="{{ server.logo }}" alt="{{ server.display_name }}">
+                    {% else %}
+                        <i class="fas fa-server"></i>
+                    {% endif %}
+                </div>
+                
+                <div class="server-name">{{ server.display_name }}</div>
+                
+                <div class="server-description">
+                    {{ server.description or 'Serveur FiveM avec système de logs' }}
+                </div>
+                
+                <div class="server-status {{ 'status-online' if server.status == 'online' else 'status-offline' }}">
+                    <i class="fas fa-circle"></i>
+                    {{ 'En ligne' if server.status == 'online' else 'Hors ligne' }}
+                </div>
+                
+                {% if server.status == 'online' %}
+                <a href="{{ url_for('auth_page', server=server_id) }}" class="server-action">
+                    <i class="fas fa-chart-line"></i> Accéder aux logs
+                </a>
+                {% else %}
+                <a href="/maintenance/{{ server_id }}" class="server-action maintenance">
+                    <i class="fas fa-exclamation-triangle"></i> Maintenance
+                </a>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="{{ url_for('static', filename='js/server_selection.js') }}?v={{ ASSET_VERSION }}"></script>
+</body>
+</html>

@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - {{ server|title }} - {{ site_name }}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}?v={{ ASSET_VERSION }}" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <!-- Box globale du dashboard -->
+        <div class="dashboard-global-box">
+            <!-- Header principal avec logo serveur, logo VOLTRE et contrôles -->
+            <div class="dashboard-main-header">
+                <!-- Section gauche : Logo et info du serveur -->
+                <div class="dashboard-title-section">
+                    <div class="server-info">
+                        {% if discord_icon %}
+                        <div class="server-icon" style="width: 48px; height: 48px; border-radius: 12px; overflow: hidden; display: flex; align-items: center; justify-content: center; padding: 0;">
+                            <img src="{{ discord_icon }}" alt="{{ server_config.get('display_name', server) }}" style="width: 100%; height: 100%; object-fit: cover;">
+                        </div>
+                        {% else %}
+                        <div class="server-icon">{{ server_config.get('display_name', server)[0].upper() }}</div>
+                        {% endif %}
+                        <div class="server-details">
+                            <h1 class="server-name">Logs de {{ server_config.get('display_name', server) }}</h1>
+                            <span class="server-subtitle">{{ server }}</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Section centre : Logo VOLTRE -->
+                <div class="dashboard-logo-center">
+                    <div class="logo-voltre">
+                        <span class="logo-vol">VOL</span><span class="logo-tre">TRE</span>
+                    </div>
+                </div>
+                
+                <!-- Section droite : Profil utilisateur et contrôles -->
+                <div class="user-profile-dashboard">
+                    <img src="{{ user_data.avatar_url }}" alt="Avatar" class="user-avatar-dashboard">
+                    <div class="user-info-dashboard">
+                        <span class="username-dashboard">{{ user_data.username }}</span>
+                    </div>
+                    <a href="{{ url_for('index') }}" class="btn-return-dashboard" title="Retour à l'accueil">
+                        <i class="fas fa-arrow-left"></i>
+                    </a>
+                    <a href="{{ url_for('admin_servers') }}" class="btn-admin-dashboard" title="Administration">
+                        <i class="fas fa-cogs"></i>
+                    </a>
+                    <button class="btn-logout-dashboard" title="Déconnexion" id="logout-btn">
+                        <i class="fas fa-sign-out-alt"></i>
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Séparateur -->
+            <div class="dashboard-separator"></div>
+            
+            <!-- Contenu principal -->
+            <div class="dashboard-content">
+                <!-- Sidebar des types de logs -->
+                <div class="logs-sidebar">
+                    <h3 class="sidebar-title">
+                        <i class="fas fa-list me-2"></i>
+                        Types de logs
+                        <span class="logs-total-count">{{ total_logs }}</span>
+                    </h3>
+                    <div class="log-types-list">
+                        <div class="log-type-item log-type-all" data-type="all">
+                            <span class="log-type-count">{{ total_logs }}</span>
+                            <span class="log-type-name">Tous</span>
+                        </div>
+                        {% for log_type in log_types %}
+                        <div class="log-type-item" data-type="{{ log_type }}">
+                            <span class="log-type-count">{{ log_counts.get(log_type, 0) }}</span>
+                            <span class="log-type-name">{{ log_type }}</span>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                
+                <!-- Zone principale des logs -->
+                <div class="logs-main-area">
+                    <div class="filters-section">
+            <form method="get" action="{{ url_for('dashboard', server=server) }}" id="filter-form">
+                <div class="filters-row">
+                    <div class="filter-input">
+                        <input type="text" name="title" placeholder="Rechercher par titre..." value="{{ request.args.get('title', '') }}" />
+                    </div>
+                    <div class="filter-input">
+                        <input type="text" name="message" placeholder="Rechercher par message..." value="{{ request.args.get('message', '') }}" />
+                    </div>
+                    <div class="filter-input">
+                        <input type="text" name="idunique" placeholder="Rechercher par ID Unique..." value="{{ request.args.get('idunique', '') }}" />
+                    </div>
+                    <div class="filter-input">
+                        <input type="text" name="name" placeholder="Rechercher par nom..." value="{{ request.args.get('name', '') }}" />
+                    </div>
+                </div>
+                <div class="filters-row">
+                    <div class="filter-input">
+                        <input type="text" name="author_id" placeholder="Rechercher par ID Auteur..." value="{{ request.args.get('author_id', '') }}" />
+                    </div>
+                    <div class="filter-input">
+                        <input type="text" name="nom_auteur" placeholder="Rechercher par Nom Auteur..." value="{{ request.args.get('nom_auteur', '') }}" />
+                    </div>
+                    <div class="filter-input date-inputs">
+                        <input type="date" name="date_start" placeholder="jj/mm/aaaa" value="{{ request.args.get('date_start', '') }}" />
+                        <input type="date" name="date_end" placeholder="jj/mm/aaaa" value="{{ request.args.get('date_end', '') }}" />
+                    </div>
+                    <div class="filter-actions">
+                        <label class="checkbox-filter">
+                            <input type="checkbox" name="show_recent" {{ 'checked' if request.args.get('show_recent') else '' }} />
+                            <span>Afficher les logs récents</span>
+                        </label>
+                        <div class="logs-per-page-selector">
+                            <label for="logs_per_page">Logs par page:</label>
+                            <select name="logs_per_page" id="logs_per_page" class="logs-per-page-select">
+                                <option value="10" {{ 'selected' if request.args.get('logs_per_page', '10') == '10' else '' }}>10</option>
+                                <option value="25" {{ 'selected' if request.args.get('logs_per_page', '10') == '25' else '' }}>25</option>
+                                <option value="50" {{ 'selected' if request.args.get('logs_per_page', '10') == '50' else '' }}>50</option>
+                                <option value="100" {{ 'selected' if request.args.get('logs_per_page', '10') == '100' else '' }}>100</option>
+                                <option value="200" {{ 'selected' if request.args.get('logs_per_page', '10') == '200' else '' }}>200</option>
+                                <option value="500" {{ 'selected' if request.args.get('logs_per_page', '10') == '500' else '' }}>500</option>
+                            </select>
+                        </div>
+                        <button type="submit" class="btn-filter">Filtrer</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+
+        <div class="logs-table">
+            <div class="table-header">
+                <div class="col-id">ID</div>
+                <div class="col-type">Type</div>
+                <div class="col-title">Titre</div>
+                <div class="col-message">Message</div>
+                <div class="col-unique-id">ID Unique</div>
+                <div class="col-name">Nom</div>
+                <div class="col-date">Date</div>
+            </div>
+            
+            <div class="table-body">
+                {% for log in logs %}
+                <div class="log-row" data-log-id="{{ log.id }}">
+                    <div class="col-id">{{ log.id }}</div>
+                    <div class="col-type">
+                        <span class="type-badge type-{{ log.type|lower|replace(' ', '-')|replace('_', '-') if log.type else 'unknown' }}">{{ log.type or 'Non spécifié' }}</span>
+                    </div>
+                    <div class="col-title">{{ log.logs_title or 'Staff' }}</div>
+                    <div class="col-message">{{ log.logs_message or 'Aucun message' }}</div>
+                    <div class="col-unique-id">
+                        <span class="unique-id-badge">{{ log.idunique or 'N/A' }}</span>
+                    </div>
+                    <div class="col-name">
+                        <span class="name-badge name-{{ log.name|lower|replace(' ', '-') if log.name else 'staff' }}">{{ log.name or 'Staff' }}</span>
+                    </div>
+                    <div class="col-date">{{ log.date.strftime('%Y-%m-%d %H:%M:%S') if log.date else 'N/A' }}</div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        
+        <!-- Pagination -->
+        <div class="pagination-section">
+            <div class="pagination-container">
+                {% set args = request.args.to_dict(flat=True) %}
+                {% do args.pop('page', None) %}
+                {% if page > 1 %}
+                    <a class="page-btn" href="{{ url_for('dashboard', server=server, page=1, **args) }}">«</a>
+                    <a class="page-btn" href="{{ url_for('dashboard', server=server, page=page-1, **args) }}">‹</a>
+                {% else %}
+                    <span class="page-btn disabled">«</span>
+                    <span class="page-btn disabled">‹</span>
+                {% endif %}
+                {% for p in page_numbers %}
+                    {% if p == page %}
+                        <span class="page-btn active">{{ p }}</span>
+                    {% else %}
+                        <a class="page-btn" href="{{ url_for('dashboard', server=server, page=p, **args) }}">{{ p }}</a>
+                    {% endif %}
+                {% endfor %}
+                {% if page < total_pages %}
+                    <a class="page-btn" href="{{ url_for('dashboard', server=server, page=page+1, **args) }}">›</a>
+                    <a class="page-btn" href="{{ url_for('dashboard', server=server, page=total_pages, **args) }}">»</a>
+                {% else %}
+                    <span class="page-btn disabled">›</span>
+                    <span class="page-btn disabled">»</span>
+                {% endif %}
+            </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="dashboard-data" hidden
+         data-categories='{{ (['Tous'] + log_types) | tojson | safe }}'
+         data-logout-url='{{ url_for('logout') }}'>
+    </div>
+    <script src="{{ url_for('static', filename='js/dashboard.js') }}?v={{ ASSET_VERSION }}"></script>
+
+</body>
+</html>

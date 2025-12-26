@@ -1,0 +1,20 @@
+[Unit]
+Description=Synchronisation automatique des règles firewall MySQL
+Documentation=https://github.com/votre-projet
+After=network-online.target
+
+[Service]
+Type=oneshot
+User=root
+WorkingDirectory=/var/www/logspanel
+ExecStart=/var/www/logspanel/deploy/allow_db_egress.sh --config /var/www/logspanel/servers_config.json --auto
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=firewall-sync
+
+# Options de sécurité
+NoNewPrivileges=no
+PrivateTmp=yes
+
+[Install]
+WantedBy=multi-user.target

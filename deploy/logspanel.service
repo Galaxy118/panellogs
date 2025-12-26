@@ -1,0 +1,80 @@
+# =============================================================================
+# Service Systemd pour Panel Logs VOLTRE
+# Optimisé pour Ubuntu 24.04 avec Cloudflare Tunnels
+# =============================================================================
+#
+# INSTALLATION :
+# 1. Copiez ce fichier vers /etc/systemd/system/logspanel.service
+# 2. Modifiez les chemins selon votre installation
+# 3. Exécutez : sudo systemctl daemon-reload
+# 4. Activez : sudo systemctl enable logspanel
+# 5. Démarrez : sudo systemctl start logspanel
+#
+# =============================================================================
+
+[Unit]
+Description=Panel Logs VOLTRE - Service Flask/Gunicorn
+Documentation=https://github.com/votre-repo/panellogs
+
+# Démarrer après le réseau et cloudflared
+After=network-online.target cloudflared.service
+Wants=network-online.target
+
+# Dépendance optionnelle sur cloudflared
+# (le panel peut fonctionner sans, mais ne sera pas accessible)
+# Wants=cloudflared.service
+
+[Service]
+# Type de service
+Type=notify
+NotifyAccess=all
+
+# Utilisateur/Groupe
+User=www-data
+Group=www-data
+
+# Répertoire de travail - MODIFIEZ selon votre installation
+WorkingDirectory=/var/www/logspanel
+
+# Variables d'environnement de base
+Environment="PATH=/var/www/logspanel/venv/bin:/usr/local/bin:/usr/bin:/bin"
+Environment="PORT=3001"
+Environment="PYTHONUNBUFFERED=1"
+
+# Charger le fichier .env
+EnvironmentFile=-/var/www/logspanel/.env
+
+# Commande de démarrage
+ExecStart=/var/www/logspanel/venv/bin/gunicorn \
+    --config /var/www/logspanel/gunicorn_config.py \
+    main:app
+
+# Arrêt propre
+ExecStop=/bin/kill -s TERM $MAINPID
+TimeoutStopSec=30
+
+# Redémarrage automatique
+Restart=always
+RestartSec=10
+StartLimitIntervalSec=60
+StartLimitBurst=3
+
+# Limites de ressources
+LimitNOFILE=65535
+LimitNPROC=4096
+
+# Sécurité renforcée
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=yes
+ReadWritePaths=/var/www/logspanel/instance
+ReadWritePaths=/tmp
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=logspanel
+
+[Install]
+WantedBy=multi-user.target

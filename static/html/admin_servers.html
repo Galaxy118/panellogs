@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Administration des Serveurs - {{ site_name }}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/admin_servers.css') }}?v={{ ASSET_VERSION }}">
+</head>
+<body>
+    <div class="container">
+        <!-- Box globale unifiée -->
+        <div class="servers-global-box">
+                <!-- Header principal avec profil utilisateur -->
+                <div class="main-admin-header">
+                    <div class="admin-title-section">
+                        <div class="logo-voltre mb-3">
+                            <span class="logo-vol">VOL</span><span class="logo-tre">TRE</span>
+                        </div>
+                        <h1 class="header-title">
+                            <i class="fas fa-server me-3"></i>
+                            Administration des Serveurs
+                        </h1>
+                        <p class="text-muted">Gérez la configuration de vos serveurs FiveM</p>
+                    </div>
+                    
+                    <!-- Profil utilisateur -->
+                    <div class="user-profile-admin">
+                        <img src="{{ user_data.avatar_url }}" alt="Avatar" class="user-avatar-admin">
+                        <div class="user-info-admin">
+                            <span class="username-admin">{{ user_data.username }}</span>
+                            <small class="user-role-admin">
+                                {% if user_data.permissions.is_super_admin %}
+                                    <i class="fas fa-crown" style="color: var(--warning-color);"></i> Super Admin
+                                {% else %}
+                                    <i class="fas fa-user-shield" style="color: var(--accent-color);"></i> Administrateur
+                                {% endif %}
+                            </small>
+                        </div>
+                        <a href="{{ url_for('logout') }}" class="logout-btn-admin" title="Déconnexion">
+                            <i class="fas fa-sign-out-alt"></i>
+                        </a>
+                    </div>
+                </div>
+                
+                <!-- Séparateur -->
+                <div class="admin-separator"></div>
+                
+                <div class="servers-box-header">
+                    <h3 class="servers-box-title">
+                        <i class="fas fa-server me-2"></i>
+                        Serveurs configurés
+                        <span class="servers-count">{{ servers|length }}</span>
+                    </h3>
+                    
+                    <!-- Bouton de création de serveur (SUPER_ADMIN uniquement) -->
+                    {% if user_data and user_data.permissions.is_super_admin %}
+                    <button type="button" class="btn btn-success btn-create-server" data-bs-toggle="modal" data-bs-target="#createServerModal">
+                        <i class="fas fa-plus me-2"></i>
+                        Créer un nouveau serveur
+                    </button>
+                    {% endif %}
+                </div>
+                
+                <div class="servers-grid">
+                    {% for server_id, server in servers.items() %}
+                    <div class="server-card-wrapper">
+                        <div class="card server-card" data-server-id="{{ server_id }}">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-start mb-2">
+                                    <h6 class="card-title mb-0">
+                                        <i class="fas fa-gamepad me-2" style="color: var(--accent-color);"></i>
+                                        {{ server.display_name }}
+                                    </h6>
+                                    <span class="status-badge {% if server.status == 'online' %}status-online{% else %}status-offline{% endif %}">
+                                        <i class="fas fa-circle me-1"></i>
+                                        {{ server.status|title }}
+                                    </span>
+                                </div>
+                                
+                                <p class="card-text text-muted mb-2" style="font-size: 0.875rem;">
+                                    {{ server.description or 'Aucune description' }}
+                                </p>
+                                
+                                <div class="mb-2">
+                                    <small class="text-muted">
+                                        <i class="fas fa-database me-1"></i>
+                                        Base de données: 
+                                        {% if server.database_uri %}
+                                            <span class="text-success">Configurée</span>
+                                        {% else %}
+                                            <span class="text-danger">Non configurée</span>
+                                        {% endif %}
+                                    </small>
+                                    <br>
+                                    <small class="text-muted">
+                                        <i class="fab fa-discord me-1"></i>
+                                        Discord: 
+                                        {% if server.discord and (server.discord.guild_id or server.discord.role_id_staff or server.discord.role_id_admin or server.discord.channel_id) %}
+                                            <span class="text-success">Configuré</span>
+                                        {% else %}
+                                            <span class="text-danger">Non configuré</span>
+                                        {% endif %}
+                                    </small>
+                                </div>
+                                
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <small class="text-muted">
+                                        ID: <code>{{ server_id }}</code>
+                                    </small>
+                                    <div class="btn-group">
+                                        <a href="{{ url_for('edit_server', server_id=server_id) }}" class="btn btn-edit btn-sm">
+                                            <i class="fas fa-edit me-1"></i>
+                                            Éditer
+                                        </a>
+                                        {% if user_data and user_data.permissions.is_super_admin %}
+                                        <button type="button" class="btn btn-danger btn-sm" onclick="confirmDeleteServer('{{ server_id }}', '{{ server.display_name }}')">
+                                            <i class="fas fa-trash me-1"></i>
+                                            Supprimer
+                                        </button>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                
+                <!-- Bouton retour intégré -->
+                <div class="text-center mt-4 pt-3" style="border-top: 1px solid var(--border-color);">
+                    <a href="{{ url_for('index') }}" class="btn btn-secondary">
+                        <i class="fas fa-arrow-left me-2"></i>
+                        Retour à l'accueil
+                    </a>
+                </div>
+            </div>
+     </div>
+
+    <!-- Modal de création de serveur -->
+    <div class="modal fade" id="createServerModal" tabindex="-1" aria-labelledby="createServerModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="createServerModalLabel">
+                        <i class="fas fa-server me-2" style="color: var(--success-color);"></i>
+                        Créer un nouveau serveur
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <form id="createServerForm">
+                    <!-- SÉCURITÉ: Token CSRF -->
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
+                    <div class="modal-body">
+                        <!-- Section informations de base -->
+                        <div class="form-section mb-4">
+                            <h6 class="section-header mb-3">
+                                <i class="fas fa-info-circle me-2"></i>
+                                Informations de base
+                            </h6>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="server_id" class="form-label">
+                                        <i class="fas fa-tag me-1"></i>
+                                        ID du serveur *
+                                    </label>
+                                    <input type="text" class="form-control" id="server_id" name="server_id" required
+                                           pattern="[a-z0-9_-]+" placeholder="ex: monserveur">
+                                    <div class="form-text">Lettres minuscules, chiffres, tirets et underscores uniquement</div>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="display_name" class="form-label">
+                                        <i class="fas fa-signature me-1"></i>
+                                        Nom d'affichage *
+                                    </label>
+                                    <input type="text" class="form-control" id="display_name" name="display_name" required
+                                           placeholder="Mon Serveur RP">
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label for="description" class="form-label">
+                                    <i class="fas fa-align-left me-1"></i>
+                                    Description
+                                </label>
+                                <textarea class="form-control" id="description" name="description" rows="2"
+                                          placeholder="Description du serveur"></textarea>
+                            </div>
+                            <div class="mb-3">
+                                <label for="database_uri" class="form-label">
+                                    <i class="fas fa-database me-1"></i>
+                                    URI de la base de données
+                                </label>
+                                <input type="text" class="form-control" id="database_uri" name="database_uri"
+                                       placeholder="mysql://user:password@host:port/database">
+                            </div>
+                        </div>
+                        
+                        <!-- Section Discord -->
+                        <div class="form-section">
+                            <h6 class="section-header mb-3">
+                                <i class="fab fa-discord me-2" style="color: #5865F2;"></i>
+                                Configuration Discord (optionnel)
+                            </h6>
+                            <div class="mb-3">
+                                <label for="discord_guild_id" class="form-label">
+                                    <i class="fas fa-users me-1"></i>
+                                    Guild ID *
+                                </label>
+                                <input type="text" class="form-control" id="discord_guild_id" name="discord_guild_id" 
+                                       placeholder="ID du serveur Discord">
+                                <div class="form-text">ID du serveur Discord où le bot sera utilisé</div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="discord_role_staff" class="form-label">
+                                        <i class="fas fa-user-tie me-1"></i>
+                                        Rôle Staff
+                                    </label>
+                                    <input type="text" class="form-control" id="discord_role_staff" name="discord_role_staff"
+                                           placeholder="ID ou nom du rôle staff">
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="discord_role_admin" class="form-label">
+                                        <i class="fas fa-crown me-1"></i>
+                                        Rôle Admin
+                                    </label>
+                                    <input type="text" class="form-control" id="discord_role_admin" name="discord_role_admin"
+                                           placeholder="ID ou nom du rôle admin">
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label for="discord_channel_id" class="form-label">
+                                    <i class="fas fa-hashtag me-1"></i>
+                                    ID du Salon Discord
+                                </label>
+                                <input type="text" class="form-control" id="discord_channel_id" name="discord_channel_id"
+                                       placeholder="123456789012345678">
+                                <div class="form-text">ID du salon Discord où le bot enverra les logs (activer le mode développeur Discord pour obtenir l'ID)</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                        <button type="submit" class="btn btn-success">
+                            <i class="fas fa-plus me-1"></i>
+                            Créer le serveur
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de confirmation de suppression -->
+    <div class="modal fade" id="deleteServerModal" tabindex="-1" aria-labelledby="deleteServerModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header" style="background: rgba(231, 76, 60, 0.1);">
+                    <h5 class="modal-title" id="deleteServerModalLabel">
+                        <i class="fas fa-exclamation-triangle me-2" style="color: #e74c3c;"></i>
+                        Confirmer la suppression
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div class="text-center mb-4">
+                        <div class="warning-icon mb-3">
+                            <i class="fas fa-server" style="font-size: 3rem; color: #e74c3c; opacity: 0.7;"></i>
+                        </div>
+                        <h6 class="mb-3" style="color: var(--text-color);">Suppression du serveur</h6>
+                        <p class="mb-2" style="color: var(--text-secondary);">Êtes-vous sûr de vouloir supprimer le serveur</p>
+                        <p class="mb-3"><strong id="deleteServerName" style="color: var(--text-color); font-size: 1.1rem;"></strong> ?</p>
+                        <div class="alert-box p-3 rounded" style="background: rgba(231, 76, 60, 0.1); border: 1px solid rgba(231, 76, 60, 0.3);">
+                            <i class="fas fa-exclamation-triangle me-2" style="color: #e74c3c;"></i>
+                            <span style="color: #e74c3c; font-weight: 500;">Cette action est irréversible !</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times me-1"></i>
+                        Annuler
+                    </button>
+                    <button type="button" class="btn btn-danger" id="confirmDeleteBtn">
+                        <i class="fas fa-trash me-1"></i>
+                        Supprimer définitivement
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="{{ url_for('static', filename='js/admin_servers.js') }}?v={{ ASSET_VERSION }}"></script>
+</body>
+</html>

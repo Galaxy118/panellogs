@@ -1,0 +1,20 @@
+# Normalisation des fins de ligne
+* text=auto
+
+# Scripts shell doivent avoir LF (Unix)
+*.sh text eol=lf
+
+# Fichiers texte
+*.md text
+*.txt text
+*.json text
+*.py text
+*.yml text
+*.yaml text
+
+# Images binaires
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
