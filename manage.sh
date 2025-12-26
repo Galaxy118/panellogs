@@ -1,6 +1,6 @@
 #!/bin/bash
 # =============================================================================
-# Panel Logs VOLTRE - Script de gestion
+# Panel Logs Galaxy - Script de gestion
 # Redirige vers le script principal dans deploy/
 # =============================================================================
 

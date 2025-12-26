@@ -1,6 +1,6 @@
 #!/bin/bash
 # =============================================================================
-# Script de gestion - Panel Logs VOLTRE
+# Script de gestion - Panel Logs Galaxy
 # Ubuntu 24.04 + Cloudflare Tunnels
 # =============================================================================
 #
@@ -315,7 +315,7 @@ cmd_tunnel() {
 # Afficher l'aide
 cmd_help() {
     echo ""
-    printf "${CYAN}Panel Logs VOLTRE - Script de gestion${NC}\n"
+    printf "${CYAN}Panel Logs Galaxy - Script de gestion${NC}\n"
     echo ""
     printf "${BLUE}Usage:${NC}\n"
     echo "  sudo $0 <commande>"

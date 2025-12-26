@@ -1,5 +1,5 @@
 # =============================================================================
-# Configuration Gunicorn optimisée pour le Panel Logs VOLTRE
+# Configuration Gunicorn optimisée pour le Panel Logs Galaxy
 # Optimisé pour Ubuntu 24.04 avec Cloudflare Tunnels
 # Utilisation: gunicorn -c gunicorn_config.py main:app
 # =============================================================================

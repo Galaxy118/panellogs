@@ -1,5 +1,5 @@
 # =============================================================================
-# Service Systemd pour Panel Logs VOLTRE
+# Service Systemd pour Panel Logs Galaxy
 # Optimisé pour Ubuntu 24.04 avec Cloudflare Tunnels
 # =============================================================================
 #
@@ -13,7 +13,7 @@
 # =============================================================================
 
 [Unit]
-Description=Panel Logs VOLTRE - Service Flask/Gunicorn
+Description=Panel Logs Galaxy - Service Flask/Gunicorn
 Documentation=https://github.com/votre-repo/panellogs
 
 # Démarrer après le réseau et cloudflared

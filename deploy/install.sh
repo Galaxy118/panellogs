@@ -1,6 +1,6 @@
 #!/bin/bash
 # =============================================================================
-# Script d'installation - Panel Logs VOLTRE
+# Script d'installation - Panel Logs Galaxy
 # Ubuntu 24.04 + Cloudflare Tunnels
 # =============================================================================
 #
@@ -66,7 +66,7 @@ done
 print_banner() {
     echo ""
     printf "${CYAN}╔════════════════════════════════════════════════════════════════╗${NC}\n"
-    printf "${CYAN}║${NC}    ${BLUE}🚀 Panel Logs VOLTRE - Installation${NC}                          ${CYAN}║${NC}\n"
+    printf "${CYAN}║${NC}    ${BLUE}🚀 Panel Logs Galaxy - Installation${NC}                          ${CYAN}║${NC}\n"
     printf "${CYAN}║${NC}    ${BLUE}Ubuntu 24.04 + Cloudflare Tunnels${NC}                            ${CYAN}║${NC}\n"
     printf "${CYAN}╚════════════════════════════════════════════════════════════════╝${NC}\n"
     echo ""
@@ -415,7 +415,7 @@ install_service() {
     # Créer le fichier de service
     cat > /etc/systemd/system/logspanel.service << EOF
 [Unit]
-Description=Panel Logs VOLTRE - Flask/Gunicorn
+Description=Panel Logs Galaxy - Flask/Gunicorn
 After=network-online.target
 Wants=network-online.target
 

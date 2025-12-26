@@ -1,5 +1,5 @@
 # =============================================================================
-# Dépendances du Panel Logs VOLTRE
+# Dépendances du Panel Logs Galaxy
 # Installation: pip install -r requirements.txt
 # =============================================================================
 

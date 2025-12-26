@@ -1,4 +1,4 @@
-# 🚀 Panel Logs VOLTRE
+# 🚀 Panel Logs Galaxy
 
 Panel de gestion des logs multi-serveurs pour FiveM avec authentification Discord.
 
@@ -408,4 +408,4 @@ En cas de problème :
 
 ---
 
-**Made with ❤️ by VOLTRE**
+**Made with ❤️ by Galaxy**

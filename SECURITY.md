@@ -1,4 +1,4 @@
-# 🔐 Guide de Sécurité - Panel Logs VOLTRE
+# 🔐 Guide de Sécurité - Panel Logs Galaxy
 
 Ce document résume les mesures de sécurité implémentées et les bonnes pratiques à suivre.
 

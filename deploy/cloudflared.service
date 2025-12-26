@@ -1,6 +1,6 @@
 # =============================================================================
 # Service Systemd pour Cloudflare Tunnel
-# Panel Logs VOLTRE - Ubuntu 24.04
+# Panel Logs Galaxy - Ubuntu 24.04
 # =============================================================================
 #
 # NOTE: Ce fichier est fourni à titre de référence.
@@ -15,7 +15,7 @@
 # =============================================================================
 
 [Unit]
-Description=Cloudflare Tunnel for Panel Logs VOLTRE
+Description=Cloudflare Tunnel for Panel Logs Galaxy
 Documentation=https://developers.cloudflare.com/cloudflare-one/connections/connect-apps
 After=network-online.target
 Wants=network-online.target
