@@ -92,44 +92,59 @@ class ServerConfig:
         return self._config.get('global', {})
     
     def save_config(self):
-        """Sauvegarde la configuration dans le fichier JSON"""
-        try:
-            logger.debug(f"💾 Tentative de sauvegarde de {self.config_file}")
-            
-            # Vérifier que le fichier existe et est accessible
-            file_path = os.path.abspath(self.config_file)
-            logger.debug(f"📂 Chemin absolu: {file_path}")
-            
-            # Vérifier les permissions
-            if os.path.exists(file_path):
-                file_stats = os.stat(file_path)
-                logger.debug(f"📋 Permissions: {oct(file_stats.st_mode)}, Owner UID: {file_stats.st_uid}")
-            
-            # Vérifier les permissions du dossier parent
-            parent_dir = os.path.dirname(file_path)
-            if os.path.exists(parent_dir):
-                dir_stats = os.stat(parent_dir)
-                logger.debug(f"📁 Dossier parent: {parent_dir}, Permissions: {oct(dir_stats.st_mode)}")
-            
-            with open(self.config_file, 'w', encoding='utf-8') as f:
-                json.dump(self._config, f, indent=2, ensure_ascii=False)
-            
-            logger.info(f"✅ Configuration sauvegardée avec succès: {self.config_file}")
-        except PermissionError as e:
-            logger.error(f"❌ Erreur de permissions lors de la sauvegarde: {e}")
-            logger.error(f"🔐 Le processus actuel (UID: {os.getuid()}, GID: {os.getgid()}) n'a pas les droits d'écriture")
-            logger.error(f"💡 Solution: sudo chown {os.getuid()}:{os.getgid()} {self.config_file}")
-            print(f"[ERROR] Erreur de permissions: {e}")
-        except OSError as e:
-            logger.error(f"❌ Erreur système lors de la sauvegarde: {e}")
-            if e.errno == 30:  # EROFS - Read-only file system
-                logger.error("💿 Le système de fichiers est en lecture seule!")
-                logger.error("💡 Solution: sudo mount -o remount,rw /")
-            print(f"[ERROR] Erreur système: {e}")
-        except Exception as e:
-            logger.error(f"❌ Erreur inconnue lors de la sauvegarde: {e}")
-            logger.exception(e)
-            print(f"[ERROR] Erreur lors de la sauvegarde: {e}")
+        """Sauvegarde la configuration dans le fichier JSON avec protection anti-RO"""
+        import subprocess
+        import time
+        
+        max_retries = 3
+        retry_delay = 0.5
+        
+        for attempt in range(max_retries):
+            try:
+                # PROTECTION: Forcer remount RW avant chaque tentative
+                try:
+                    subprocess.run(
+                        ['mount', '-o', 'remount,rw', '/'],
+                        check=False,
+                        timeout=2,
+                        stdout=subprocess.DEVNULL,
+                        stderr=subprocess.DEVNULL
+                    )
+                    time.sleep(0.1)
+                except Exception:
+                    pass
+                
+                logger.debug(f"💾 Tentative {attempt + 1}/{max_retries}: sauvegarde de {self.config_file}")
+                
+                file_path = self.config_file if os.path.isabs(self.config_file) else os.path.join('/var/www/logspanel', self.config_file)
+                
+                # Écriture atomique via fichier temporaire
+                temp_file = file_path + '.tmp'
+                with open(temp_file, 'w', encoding='utf-8') as f:
+                    json.dump(self._config, f, indent=2, ensure_ascii=False)
+                
+                os.replace(temp_file, file_path)
+                
+                logger.info(f"✅ Configuration sauvegardée avec succès: {file_path}")
+                return
+                
+            except OSError as e:
+                if e.errno == 30 and attempt < max_retries - 1:
+                    logger.warning(f"⚠️ FS en RO (essai {attempt + 1}/{max_retries}), retry...")
+                    time.sleep(retry_delay)
+                    continue
+                else:
+                    logger.error(f"❌ Erreur système lors de la sauvegarde: {e}")
+                    if e.errno == 30:
+                        logger.error("💿 Le système de fichiers est en lecture seule!")
+                        logger.error("💡 Solution: sudo mount -o remount,rw /")
+                    print(f"[ERROR] Erreur système: {e}")
+                    raise
+            except Exception as e:
+                logger.error(f"❌ Erreur lors de la sauvegarde: {e}")
+                logger.exception(e)
+                print(f"[ERROR] Erreur lors de la sauvegarde: {e}")
+                raise
     
     def get_all_servers(self):
         """Retourne tous les serveurs avec leurs configurations"""
