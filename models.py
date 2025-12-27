@@ -54,7 +54,7 @@ class Log(db.Model):
 class ServerConfig:
     """Classe pour gérer la configuration des serveurs"""
     
-    def __init__(self, config_file='servers_config.json'):
+    def __init__(self, config_file='/var/www/logspanel/servers_config.json'):
         self.config_file = config_file
         self._config = None
         self.load_config()
