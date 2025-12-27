@@ -38,6 +38,8 @@ import traceback
 import re
 from functools import wraps
 import discord
+import logging
+import sys
 from discord.ext import commands
 import asyncio
 import threading
@@ -185,6 +187,66 @@ except UnicodeDecodeError:
 
 # Ensure Flask doesn't try to reload .env with UTF-8 later
 os.environ.setdefault("FLASK_SKIP_DOTENV", "1")
+
+# =============================================================================
+# CONFIGURATION DU SYSTÈME DE DEBUG
+# =============================================================================
+
+# Lire la variable DEBUG_MODE depuis .env
+DEBUG_MODE = os.getenv('DEBUG_MODE', 'false').lower() in ('true', '1', 'yes', 'on')
+
+# Configurer le logging Python
+if DEBUG_MODE:
+    logging.basicConfig(
+        level=logging.DEBUG,
+        format='[%(levelname)s] [%(asctime)s] %(message)s',
+        datefmt='%Y-%m-%d %H:%M:%S',
+        handlers=[
+            logging.StreamHandler(sys.stdout)
+        ]
+    )
+    logger = logging.getLogger(__name__)
+    logger.info("🐛 MODE DEBUG ACTIVÉ - Logs détaillés activés")
+else:
+    logging.basicConfig(
+        level=logging.WARNING,
+        format='[%(levelname)s] %(message)s',
+        handlers=[
+            logging.StreamHandler(sys.stdout)
+        ]
+    )
+    logger = logging.getLogger(__name__)
+
+def debug_log(message, level='DEBUG', **kwargs):
+    """
+    Fonction helper pour logger en mode debug
+    
+    Args:
+        message: Le message à logger
+        level: Niveau de log (DEBUG, INFO, WARNING, ERROR)
+        **kwargs: Arguments supplémentaires à afficher
+    """
+    if not DEBUG_MODE and level == 'DEBUG':
+        return
+    
+    # Ajouter les kwargs au message
+    if kwargs:
+        kwargs_str = ', '.join([f"{k}={v}" for k, v in kwargs.items()])
+        full_message = f"{message} | {kwargs_str}"
+    else:
+        full_message = message
+    
+    # Logger selon le niveau
+    if level == 'DEBUG':
+        logger.debug(full_message)
+    elif level == 'INFO':
+        logger.info(full_message)
+    elif level == 'WARNING':
+        logger.warning(full_message)
+    elif level == 'ERROR':
+        logger.error(full_message)
+    else:
+        logger.debug(full_message)
 
 app = Flask(__name__, static_folder='static', template_folder='static/html')
 
@@ -405,30 +467,54 @@ def check_client_role(user_id):
     Vérifie si un utilisateur a le rôle client sur le serveur Discord configuré.
     Retourne True si l'utilisateur peut créer des serveurs.
     """
+    debug_log("🔍 check_client_role appelé", user_id=user_id)
+    debug_log("🔍 Configuration Client Panel", 
+              guild_id=CLIENT_DISCORD_GUILD_ID, 
+              role_id=CLIENT_DISCORD_ROLE_ID,
+              enabled=is_client_enabled())
+    
     if not is_client_enabled():
+        debug_log("❌ Client panel non activé", reason="is_client_enabled=False")
         return False
     
     if not DISCORD_BOT_TOKEN:
+        debug_log("❌ DISCORD_BOT_TOKEN non configuré", level="WARNING")
         return False
     
     try:
         # Vérifier via l'API Discord
         url = f"https://discord.com/api/guilds/{CLIENT_DISCORD_GUILD_ID}/members/{user_id}"
-        headers = {"Authorization": f"Bot {DISCORD_BOT_TOKEN}"}
-        res = requests.get(url, headers=headers, timeout=10)
+        headers = {"Authorization": f"Bot {DISCORD_BOT_TOKEN[:20]}..."}  # Masquer le token
+        debug_log("🌐 Appel API Discord", url=url)
+        
+        res = requests.get(
+            f"https://discord.com/api/guilds/{CLIENT_DISCORD_GUILD_ID}/members/{user_id}",
+            headers={"Authorization": f"Bot {DISCORD_BOT_TOKEN}"},
+            timeout=10
+        )
+        
+        debug_log("📡 Réponse API Discord", status=res.status_code)
         
         if res.status_code == 200:
             member = res.json()
             roles = [str(r) for r in member.get('roles', [])]
-            return str(CLIENT_DISCORD_ROLE_ID) in roles
+            debug_log("👤 Rôles de l'utilisateur", roles=roles)
+            debug_log("🎯 Rôle recherché", target_role=CLIENT_DISCORD_ROLE_ID)
+            has_role = str(CLIENT_DISCORD_ROLE_ID) in roles
+            debug_log(f"{'✅' if has_role else '❌'} Résultat vérification rôle", has_role=has_role)
+            return has_role
         elif res.status_code == 404:
             # L'utilisateur n'est pas sur le serveur
+            debug_log("⚠️ Utilisateur non trouvé sur le serveur Discord", level="WARNING")
             return False
         else:
-            print(f"[WARNING] Discord API a renvoyé {res.status_code} pour client check")
+            debug_log("❌ Discord API erreur", level="WARNING", 
+                     status=res.status_code, 
+                     response=res.text[:200])
             return False
     except Exception as e:
-        print(f"[ERROR] Erreur lors de la vérification du rôle client: {e}")
+        debug_log("💥 Erreur lors de la vérification du rôle client", level="ERROR", error=str(e))
+        logger.exception(e) if DEBUG_MODE else None
         return False
 
 # Validation et diagnostics de configuration Discord
@@ -809,6 +895,8 @@ def check_discord_role_sync(user_id, server_id, required_role='staff'):
 
 def get_user_server_permissions(user_id):
     """Récupère les permissions de l'utilisateur pour tous les serveurs"""
+    debug_log("🔐 get_user_server_permissions appelé", user_id=user_id)
+    
     permissions = {
         'accessible_servers': [],
         'admin_servers': [],
@@ -819,6 +907,7 @@ def get_user_server_permissions(user_id):
     
     # Vérifier si super admin
     if is_super_admin_id(user_id):
+        debug_log("👑 Utilisateur identifié comme SUPER_ADMIN", user_id=user_id)
         permissions['is_super_admin'] = True
         permissions['accessible_servers'] = 'all'
         permissions['admin_servers'] = 'all'
@@ -826,18 +915,29 @@ def get_user_server_permissions(user_id):
         return permissions
     
     # Vérifier si l'utilisateur est un client (peut créer des serveurs)
-    if check_client_role(user_id):
+    is_client = check_client_role(user_id)
+    if is_client:
+        debug_log("🏪 Utilisateur identifié comme CLIENT", user_id=user_id)
         permissions['is_client'] = True
+    else:
+        debug_log("👤 Utilisateur standard (ni admin ni client)", user_id=user_id)
     
     # Vérifier les permissions pour chaque serveur
-    for server_id in server_config.get_server_list():
+    server_list = server_config.get_server_list()
+    debug_log("📋 Vérification des permissions", server_count=len(server_list))
+    
+    for server_id in server_list:
         server_conf = get_server_config(server_id)
         if not server_conf:
+            debug_log("⚠️ Configuration serveur introuvable", server_id=server_id, level="WARNING")
             continue
         
         # Vérifier si l'utilisateur est propriétaire du serveur
         owner_id = str(server_conf.get('owner_id', '') or '')
         if owner_id and owner_id == str(user_id):
+            debug_log("🏠 Utilisateur propriétaire du serveur", 
+                     server_id=server_id, 
+                     owner_id=owner_id)
             permissions['owned_servers'].append(server_id)
             permissions['accessible_servers'].append(server_id)
             permissions['admin_servers'].append(server_id)
@@ -845,17 +945,28 @@ def get_user_server_permissions(user_id):
         
         roles = get_discord_member_roles(server_conf, user_id)
         if not roles:
+            debug_log("👥 Aucun rôle Discord trouvé", server_id=server_id, user_id=user_id)
             continue
+        
+        debug_log("🎭 Rôles Discord récupérés", server_id=server_id, roles_count=len(roles))
         
         discord_config = server_conf.get('discord', {})
         staff_role = str(discord_config.get('role_id_staff', '') or '')
         admin_role = str(discord_config.get('role_id_admin', '') or '')
         
         if staff_role and staff_role in roles:
+            debug_log("✅ Rôle Staff détecté", server_id=server_id, role_id=staff_role)
             permissions['accessible_servers'].append(server_id)
         
         if admin_role and admin_role in roles:
+            debug_log("✅ Rôle Admin détecté", server_id=server_id, role_id=admin_role)
             permissions['admin_servers'].append(server_id)
+    
+    debug_log("🏁 Permissions finales calculées", 
+             accessible=len(permissions['accessible_servers']) if isinstance(permissions['accessible_servers'], list) else 'all',
+             admin=len(permissions['admin_servers']) if isinstance(permissions['admin_servers'], list) else 'all',
+             owned=len(permissions['owned_servers']) if isinstance(permissions['owned_servers'], list) else 'all',
+             is_client=permissions['is_client'])
     
     return permissions
 guild_cache = {}
@@ -1666,17 +1777,28 @@ def home():
 @require_auth()
 def account():
     """Page Mon Compte pour les utilisateurs connectés"""
+    user = request.user_data
+    user_id = user.get('user_id')
+    
+    debug_log("👤 Accès page Mon Compte", user_id=user_id, level="INFO")
+    
     # Statuts et infos serveurs
     servers_status = get_all_servers_status(use_cache=True)
+    debug_log("📊 Statuts des serveurs récupérés", server_count=len(servers_status))
 
-    user = request.user_data
     perms = user.get('permissions', {})
+    debug_log("🔐 Permissions utilisateur", 
+             is_super_admin=perms.get('is_super_admin', False),
+             is_client=perms.get('is_client', False),
+             accessible_count=len(perms.get('accessible_servers', [])) if isinstance(perms.get('accessible_servers', []), list) else 'all')
 
     # Déterminer les serveurs accessibles
     if perms.get('accessible_servers') == 'all':
         accessible_servers = list(servers_status.keys())
+        debug_log("✨ Accès à tous les serveurs (super admin)")
     else:
         accessible_servers = [sid for sid in perms.get('accessible_servers', []) if sid in servers_status]
+        debug_log("📋 Serveurs accessibles filtrés", count=len(accessible_servers))
 
     admin_servers = perms.get('admin_servers', [])
     is_super_admin = perms.get('is_super_admin', False)
@@ -1687,11 +1809,14 @@ def account():
     client_server = None
     if is_client and owned_servers and len(owned_servers) > 0:
         server_id = owned_servers[0]
+        debug_log("🏪 Client avec serveur détecté", server_id=server_id)
         client_server = {
             'id': server_id,
             'config': server_config.get_server(server_id),
             'status': servers_status.get(server_id, {})
         }
+    elif is_client:
+        debug_log("🏪 Client sans serveur détecté - formulaire de création disponible")
 
     return render_template(
         'account.html',
@@ -2295,17 +2420,28 @@ def create_server():
     user_id = request.user_data['user_id']
     user_permissions = request.user_data['permissions']
     
+    debug_log("📝 Tentative de création de serveur", user_id=user_id, level="INFO")
+    
     # Vérifier que l'utilisateur est SUPER_ADMIN ou Client autorisé
     is_super_admin = user_permissions.get('is_super_admin', False)
     is_client = user_permissions.get('is_client', False)
     
+    debug_log("🔑 Vérification des permissions", 
+             is_super_admin=is_super_admin, 
+             is_client=is_client)
+    
     if not is_super_admin and not is_client:
+        debug_log("❌ Accès refusé - utilisateur non autorisé", level="WARNING")
         return jsonify({'error': 'Accès refusé. Vous devez être Super Admin ou Client autorisé pour créer des serveurs.'}), 403
     
     # Limiter les clients à 1 seul serveur
     if is_client and not is_super_admin:
         owned_servers = user_permissions.get('owned_servers', [])
+        debug_log("🔍 Vérification limite client", owned_count=len(owned_servers))
         if owned_servers and len(owned_servers) > 0:
+            debug_log("❌ Limite atteinte - client a déjà un serveur", 
+                     owned_servers=owned_servers,
+                     level="WARNING")
             return jsonify({'error': 'Vous avez déjà un serveur. Les clients ne peuvent créer qu\'un seul serveur.'}), 403
     
     try:
@@ -2315,11 +2451,18 @@ def create_server():
         description = request.form.get('description', '').strip()
         database_uri = request.form.get('database_uri', '').strip()
         
+        debug_log("📋 Données du formulaire récupérées", 
+                 server_id=server_id,
+                 display_name=display_name,
+                 has_db_uri=bool(database_uri))
+        
         if not server_id or not display_name or not database_uri:
+            debug_log("❌ Champs requis manquants", level="WARNING")
             return jsonify({'error': 'Les champs server_id, display_name et database_uri sont requis'}), 400
         
         # Vérifier que le serveur n'existe pas déjà
         if server_config.is_valid_server(server_id):
+            debug_log("❌ Serveur existe déjà", server_id=server_id, level="WARNING")
             return jsonify({'error': f'Le serveur {server_id} existe déjà'}), 400
         
         # Créer la configuration du serveur
@@ -2338,10 +2481,13 @@ def create_server():
         
         # Si c'est un client (pas super admin), ajouter le owner_id pour lier le serveur
         if is_client and not is_super_admin:
+            debug_log("🏪 Attribution du serveur au client", owner_id=user_id)
             config_data['owner_id'] = str(user_id)
         
         # Créer le serveur
+        debug_log("💾 Création du serveur en cours...", server_id=server_id)
         server_config.create_server(server_id, config_data)
+        debug_log("✅ Serveur créé avec succès", server_id=server_id, level="INFO")
         
         # Synchroniser les règles firewall automatiquement
         sync_firewall_rules()
