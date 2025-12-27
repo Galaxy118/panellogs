@@ -339,12 +339,12 @@ def _get_or_create_engine_and_sessionmaker(server_id: str, database_uri: str):
             database_uri,
             pool_size=20,  # Augmenté pour supporter plus de connexions simultanées
             max_overflow=40,  # Augmenté pour les pics de charge
-            pool_timeout=10,
+            pool_timeout=5,  # Réduit de 10 à 5 secondes
             pool_recycle=1800,
             pool_pre_ping=True,  # Vérifie les connexions avant utilisation
             echo=False,  # Désactiver les logs SQL en production
             connect_args={
-                'connect_timeout': 10,
+                'connect_timeout': 3,  # Réduit de 10 à 3 secondes pour réponse rapide
                 'charset': 'utf8mb4',
                 'use_unicode': True
             } if database_uri.startswith('mysql') else {}
@@ -577,8 +577,8 @@ def check_server_db_status(server_id, use_cache=True):
 # Instance globale de la configuration des serveurs
 server_config = ServerConfig()
 
-# Cache pour les statuts de serveurs
-status_cache = SimpleCache(ttl=30)  # Cache de 30 secondes pour les statuts
+# Cache pour les statuts de serveurs (augmenté à 120s pour éviter les requêtes répétées)
+status_cache = SimpleCache(ttl=120)  # Cache de 2 minutes pour les statuts
 
 # Cache pour les types de logs par serveur
 log_types_cache = ServerCache(ttl=300)  # Cache de 5 minutes

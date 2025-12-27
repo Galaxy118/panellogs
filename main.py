@@ -160,17 +160,64 @@ def get_server_status(server_id, use_cache=True):
 
 # Fonction pour obtenir tous les statuts de serveurs
 def get_all_servers_status(use_cache=True):
-    """Obtient le statut de tous les serveurs de manière cohérente"""
+    """Obtient le statut de tous les serveurs de manière cohérente - VERSION OPTIMISÉE avec threads"""
+    from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeoutError
+    
     servers = server_config.get_all_servers()
     status_data = {}
     
-    for server_id, server_data in servers.items():
-        server_status = get_server_status(server_id, use_cache)
-        status_data[server_id] = {
-            'display_name': server_data.get('display_name', server_id),
-            'description': server_data.get('description', ''),
-            **server_status
+    def get_single_server_status(server_id, server_data):
+        """Fonction helper pour récupérer le statut d'un seul serveur"""
+        try:
+            server_status = get_server_status(server_id, use_cache)
+            return server_id, {
+                'display_name': server_data.get('display_name', server_id),
+                'description': server_data.get('description', ''),
+                **server_status
+            }
+        except Exception as e:
+            debug_log(f"Erreur statut serveur {server_id}", error=str(e), level="WARNING")
+            return server_id, {
+                'display_name': server_data.get('display_name', server_id),
+                'description': server_data.get('description', ''),
+                'status': 'offline',
+                'db_accessible': False,
+                'last_check': 'error'
+            }
+    
+    # Utiliser ThreadPoolExecutor pour vérifier tous les serveurs en parallèle
+    # Limite à 8 workers pour ne pas surcharger
+    with ThreadPoolExecutor(max_workers=min(8, len(servers) or 1)) as executor:
+        futures = {
+            executor.submit(get_single_server_status, sid, sdata): sid 
+            for sid, sdata in servers.items()
         }
+        
+        for future in futures:
+            try:
+                # Timeout de 3 secondes par serveur
+                server_id, result = future.result(timeout=3)
+                status_data[server_id] = result
+            except FuturesTimeoutError:
+                server_id = futures[future]
+                debug_log(f"Timeout vérification serveur {server_id}", level="WARNING")
+                status_data[server_id] = {
+                    'display_name': servers[server_id].get('display_name', server_id),
+                    'description': servers[server_id].get('description', ''),
+                    'status': 'offline',
+                    'db_accessible': False,
+                    'last_check': 'timeout'
+                }
+            except Exception as e:
+                server_id = futures[future]
+                debug_log(f"Erreur future serveur {server_id}", error=str(e), level="ERROR")
+                status_data[server_id] = {
+                    'display_name': servers[server_id].get('display_name', server_id),
+                    'description': servers[server_id].get('description', ''),
+                    'status': 'offline',
+                    'db_accessible': False,
+                    'last_check': 'error'
+                }
     
     return status_data
 
@@ -490,7 +537,7 @@ def check_client_role(user_id):
         res = requests.get(
             f"https://discord.com/api/guilds/{CLIENT_DISCORD_GUILD_ID}/members/{user_id}",
             headers={"Authorization": f"Bot {DISCORD_BOT_TOKEN}"},
-            timeout=10
+            timeout=5  # Réduit pour réponse rapide
         )
         
         debug_log("📡 Réponse API Discord", status=res.status_code)
@@ -860,7 +907,7 @@ def get_discord_member_roles(server_conf, user_id):
     try:
         url = f"https://discord.com/api/guilds/{guild_id}/members/{user_id}"
         headers = {"Authorization": f"Bot {DISCORD_BOT_TOKEN}"}
-        res = requests.get(url, headers=headers, timeout=10)
+        res = requests.get(url, headers=headers, timeout=5)  # Réduit de 10 à 5 secondes
         
         if res.status_code == 200:
             member = res.json()
@@ -973,9 +1020,9 @@ guild_cache = {}
 last_guild_update = 0
 GUILD_CACHE_TTL = 300  # 5 minutes
 
-# Cache pour les icônes Discord (TTL plus long car elles changent rarement)
+# Cache pour les icônes Discord (TTL très long car elles changent rarement)
 discord_icon_cache = {}
-DISCORD_ICON_CACHE_TTL = 3600  # 1 heure
+DISCORD_ICON_CACHE_TTL = 86400  # 24 heures (les icônes changent très rarement)
 ASSET_VERSION = os.getenv('ASSET_VERSION', str(int(time.time())))
 
 # Fonctions pour la gestion des rôles Discord
@@ -1121,7 +1168,8 @@ def get_discord_guild_icon(server_id):
         url = f"https://discord.com/api/guilds/{guild_id}"
         headers = {"Authorization": f"Bot {DISCORD_BOT_TOKEN}"}
         
-        response = requests.get(url, headers=headers, timeout=5)
+        # Timeout court (2s) pour ne pas bloquer la page
+        response = requests.get(url, headers=headers, timeout=2)
         
         if response.status_code == 200:
             guild_data = response.json()
@@ -1464,7 +1512,7 @@ def check_role_http(user_id, server_id=None, use_cache=True):
                     # Vérifier le rôle via l'API Discord
                     url = f"https://discord.com/api/guilds/{guild_id}/members/{user_id}"
                     headers = {"Authorization": f"Bot {DISCORD_BOT_TOKEN}"}
-                    res = requests.get(url, headers=headers, timeout=10)
+                    res = requests.get(url, headers=headers, timeout=5)  # Réduit pour réponse rapide
                     
                     if res.status_code == 200:
                         member = res.json()
@@ -1518,7 +1566,7 @@ def is_admin(user_id, server_id=None):
                     # Vérifier le rôle via l'API Discord
                     url = f"https://discord.com/api/guilds/{guild_id}/members/{user_id}"
                     headers = {"Authorization": f"Bot {DISCORD_BOT_TOKEN}"}
-                    res = requests.get(url, headers=headers, timeout=10)
+                    res = requests.get(url, headers=headers, timeout=5)  # Réduit pour réponse rapide
                     
                     if res.status_code == 200:
                         member = res.json()
@@ -1646,6 +1694,8 @@ def verify_turnstile_entry():
 
 @app.route('/')
 def index():
+    from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeoutError
+    
     # Vérifier si le captcha d'entrée est requis et validé
     if is_turnstile_enabled() and not is_entry_captcha_valid():
         return redirect(url_for('captcha_page'))
@@ -1653,11 +1703,25 @@ def index():
     # Afficher la page de sélection de serveurs avec informations d'authentification
     servers = get_all_servers_status(use_cache=True)
     
-    # Ajouter les logos Discord pour chaque serveur
-    for server_id in servers.keys():
-        discord_icon = get_discord_guild_icon(server_id)
-        if discord_icon:
-            servers[server_id]['discord_icon'] = discord_icon
+    # Ajouter les logos Discord pour chaque serveur EN PARALLÈLE
+    def fetch_icon(server_id):
+        try:
+            icon = get_discord_guild_icon(server_id)
+            return server_id, icon
+        except Exception:
+            return server_id, None
+    
+    # Récupérer tous les icônes en parallèle (max 2 secondes)
+    with ThreadPoolExecutor(max_workers=min(8, len(servers) or 1)) as executor:
+        icon_futures = {executor.submit(fetch_icon, sid): sid for sid in servers.keys()}
+        
+        for future in icon_futures:
+            try:
+                server_id, icon = future.result(timeout=2)
+                if icon:
+                    servers[server_id]['discord_icon'] = icon
+            except (FuturesTimeoutError, Exception):
+                pass  # Ignorer les erreurs d'icônes
     
     # Vérifier si l'utilisateur est connecté
     user_data = None
