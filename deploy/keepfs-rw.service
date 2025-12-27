@@ -1,0 +1,53 @@
+# =============================================================================
+# Service de Surveillance - Système de Fichiers en Lecture-Écriture
+# Vérifie et corrige automatiquement si le FS devient read-only
+# =============================================================================
+#
+# INSTALLATION :
+# 1. Copiez ce fichier vers /etc/systemd/system/keepfs-rw.service
+# 2. Exécutez : sudo systemctl daemon-reload
+# 3. Activez : sudo systemctl enable keepfs-rw
+# 4. Démarrez : sudo systemctl start keepfs-rw
+#
+# =============================================================================
+
+[Unit]
+Description=Keep Filesystem Read-Write
+Documentation=https://github.com/votre-repo/panellogs
+After=multi-user.target
+Before=logspanel.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+
+# Script de vérification et correction
+ExecStart=/bin/bash -c '\
+    # Vérifier si le système est en lecture seule \
+    if mount | grep "on / type" | grep -q "ro,"; then \
+        echo "[keepfs-rw] ⚠️  Système de fichiers en lecture seule détecté!"; \
+        mount -o remount,rw / && \
+        echo "[keepfs-rw] ✅ Système de fichiers remonté en lecture-écriture" || \
+        echo "[keepfs-rw] ❌ Échec du remontage"; \
+    else \
+        echo "[keepfs-rw] ✅ Système de fichiers déjà en lecture-écriture"; \
+    fi \
+'
+
+# Vérification périodique toutes les 5 minutes
+ExecStartPost=/bin/bash -c '\
+    while true; do \
+        sleep 300; \
+        if mount | grep "on / type" | grep -q "ro,"; then \
+            echo "[keepfs-rw] ⚠️  Lecture seule détectée, correction..."; \
+            mount -o remount,rw / 2>&1 | logger -t keepfs-rw; \
+        fi; \
+    done \
+' &
+
+# Redémarrage automatique en cas d'échec
+Restart=always
+RestartSec=60
+
+[Install]
+WantedBy=multi-user.target

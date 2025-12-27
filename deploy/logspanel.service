@@ -69,6 +69,8 @@ PrivateTmp=yes
 ProtectSystem=strict
 ProtectHome=yes
 ReadWritePaths=/var/www/logspanel/instance
+ReadWritePaths=/var/www/logspanel/servers_config.json
+ReadWritePaths=/var/www/logspanel/servers_config.json.backup
 ReadWritePaths=/tmp
 
 # Logging

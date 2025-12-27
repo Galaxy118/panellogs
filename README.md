@@ -229,6 +229,48 @@ Ce projet est sous licence MIT. Voir le fichier [LICENSE](LICENSE) pour plus de 
 
 ---
 
+## 🔧 Dépannage
+
+### ❌ Erreur "Read-only file system"
+
+**Symptôme** : Impossible de sauvegarder la configuration, erreur dans les logs :
+```
+[ERROR] ❌ Erreur système lors de la sauvegarde: [Errno 30] Read-only file system
+```
+
+**Cause** : La directive `ProtectSystem=strict` dans le service systemd protège le système en lecture seule.
+
+**Solution rapide** :
+```bash
+# Corriger immédiatement
+sudo mount -o remount,rw /
+
+# Appliquer le correctif permanent
+cd /var/www/logspanel/deploy
+sudo ./fix-readonly-fs.sh
+```
+
+**Solution manuelle** :
+```bash
+# 1. Remonter en lecture-écriture
+sudo mount -o remount,rw /
+
+# 2. Installer le service de surveillance
+sudo cp deploy/keepfs-rw.service /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now keepfs-rw
+
+# 3. Mettre à jour logspanel.service
+sudo cp deploy/logspanel.service /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl restart logspanel
+
+# 4. Vérifier
+sudo journalctl -u logspanel -u keepfs-rw -f
+```
+
+---
+
 ## 📞 Support
 
 - 📖 **Documentation** : [docs/](docs/)

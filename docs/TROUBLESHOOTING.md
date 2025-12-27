@@ -266,18 +266,84 @@ ingress:
 
 **Erreur :**
 ```
-[ERROR] [Errno 30] Read-only file system: 'servers_config.json'
+[ERROR] [2025-12-27 23:03:29] ❌ Erreur système lors de la sauvegarde: [Errno 30] Read-only file system: '/var/www/logspanel/servers_config.json'
+[ERROR] [2025-12-27 23:03:29] 💿 Le système de fichiers est en lecture seule!
 ```
 
-**Solution :**
+**Cause :** 
+La directive `ProtectSystem=strict` dans le service systemd rend le système de fichiers en lecture seule, sauf pour les chemins explicitement autorisés dans `ReadWritePaths`.
+
+**🚀 Solution Rapide :**
 ```bash
-# Remonter en lecture/écriture
+# Appliquer le correctif automatique
+cd /var/www/logspanel/deploy
+sudo ./fix-readonly-fs.sh
+```
+
+Le script va :
+1. ✅ Remonter le système en lecture-écriture immédiatement
+2. ✅ Installer le service de surveillance `keepfs-rw`
+3. ✅ Mettre à jour `logspanel.service` avec les bons chemins
+4. ✅ Redémarrer les services
+
+**🔧 Solution Manuelle Détaillée :**
+
+```bash
+# 1. CORRECTION IMMÉDIATE - Remonter en lecture/écriture
 sudo mount -o remount,rw /
 
 # Vérifier
 mount | grep " / "
 # Ne doit PAS contenir "ro"
+
+# 2. INSTALLER LE SERVICE DE SURVEILLANCE keepfs-rw
+# Ce service vérifie toutes les 5 minutes que le système reste en RW
+sudo cp /var/www/logspanel/deploy/keepfs-rw.service /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable keepfs-rw
+sudo systemctl start keepfs-rw
+
+# Vérifier le service
+sudo systemctl status keepfs-rw
+
+# 3. METTRE À JOUR logspanel.service
+# Le nouveau fichier inclut les chemins nécessaires en écriture
+sudo cp /var/www/logspanel/deploy/logspanel.service /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl restart logspanel
+
+# 4. VÉRIFIER LES PERMISSIONS
+sudo chown -R www-data:www-data /var/www/logspanel
+sudo chmod 775 /var/www/logspanel
+sudo chmod 664 /var/www/logspanel/servers_config.json
+
+# 5. SURVEILLER LES LOGS
+sudo journalctl -u logspanel -u keepfs-rw -f --no-pager
 ```
+
+**🔍 Vérification :**
+```bash
+# Le service keepfs-rw doit être actif
+sudo systemctl status keepfs-rw
+
+# Tester la sauvegarde
+# Allez dans l'interface web et modifiez un serveur
+# Les logs doivent afficher :
+# [DEBUG] ✅ Fichier sauvegardé avec succès: /var/www/logspanel/servers_config.json
+```
+
+**💡 Explications Techniques :**
+
+Le fichier `logspanel.service` contient maintenant :
+```ini
+ProtectSystem=strict
+ReadWritePaths=/var/www/logspanel/instance
+ReadWritePaths=/var/www/logspanel/servers_config.json
+ReadWritePaths=/var/www/logspanel/servers_config.json.backup
+ReadWritePaths=/tmp
+```
+
+Cela permet au service d'écrire sur ces fichiers spécifiques tout en maintenant la sécurité renforcée sur le reste du système.
 
 ### "Permission denied" sur servers_config.json
 
