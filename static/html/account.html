@@ -26,6 +26,8 @@
                 <div>
                     {% if is_super_admin %}
                         <span class="badge-role"><i class="fas fa-crown"></i> Super administrateur</span>
+                    {% elif is_client %}
+                        <span class="badge-role" style="background: linear-gradient(135deg, #2ecc71, #27ae60);"><i class="fas fa-store"></i> Client</span>
                     {% endif %}
                     {% if admin_servers == 'all' or (admin_servers and admin_servers|length) %}
                         <span class="badge-role"><i class="fas fa-shield-halved"></i> Accès admin</span>
@@ -39,6 +41,152 @@
                 <a href="{{ url_for('logout') }}" class="btn-outline"><i class="fas fa-sign-out-alt"></i> Déconnexion</a>
             </div>
         </div>
+
+        {# Section Client - Gestion de leur serveur unique #}
+        {% if is_client %}
+        <div class="section animate__animated animate__fadeIn" style="animation-delay: 0.1s;">
+            <h2><i class="fas fa-store"></i> Espace Client</h2>
+            
+            {% if client_server %}
+                {# Le client a déjà un serveur #}
+                <div class="client-server-card" style="background: linear-gradient(135deg, rgba(46, 204, 113, 0.1), rgba(39, 174, 96, 0.05)); border: 1px solid rgba(46, 204, 113, 0.3); border-radius: 15px; padding: 25px; margin-bottom: 20px;">
+                    <div class="d-flex justify-content-between align-items-start mb-3">
+                        <div>
+                            <h4 style="color: var(--text-color); margin: 0;">
+                                <i class="fas fa-server me-2" style="color: #2ecc71;"></i>
+                                {{ client_server.config.display_name if client_server.config else client_server.id }}
+                            </h4>
+                            <small class="muted">{{ client_server.config.description if client_server.config and client_server.config.description else 'Aucune description' }}</small>
+                        </div>
+                        <span class="status {{ 'status-online' if client_server.status and client_server.status.status == 'online' else 'status-offline' }}">
+                            <i class="fas fa-circle"></i>
+                            {{ 'En ligne' if client_server.status and client_server.status.status == 'online' else 'Hors ligne' }}
+                        </span>
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <small class="muted"><i class="fas fa-database me-1"></i> Base de données:</small>
+                            {% if client_server.config and client_server.config.database_uri %}
+                                <span class="badge bg-success ms-1">Configurée</span>
+                            {% else %}
+                                <span class="badge bg-danger ms-1">Non configurée</span>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6">
+                            <small class="muted"><i class="fab fa-discord me-1"></i> Discord:</small>
+                            {% if client_server.config and client_server.config.discord and client_server.config.discord.guild_id %}
+                                <span class="badge bg-success ms-1">Configuré</span>
+                            {% else %}
+                                <span class="badge bg-warning ms-1">Non configuré</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <div class="d-flex gap-2 flex-wrap">
+                        <a href="{{ url_for('dashboard', server=client_server.id) }}" class="btn-primaryx">
+                            <i class="fas fa-chart-line me-1"></i> Voir les logs
+                        </a>
+                        <a href="{{ url_for('edit_server', server_id=client_server.id) }}" class="btn-outline" style="border-color: #2ecc71; color: #2ecc71;">
+                            <i class="fas fa-edit me-1"></i> Configurer
+                        </a>
+                    </div>
+                </div>
+            {% else %}
+                {# Le client n'a pas encore de serveur - Formulaire de création #}
+                <div class="client-create-card" style="background: linear-gradient(135deg, rgba(52, 152, 219, 0.1), rgba(41, 128, 185, 0.05)); border: 1px solid rgba(52, 152, 219, 0.3); border-radius: 15px; padding: 25px;">
+                    <div class="text-center mb-4">
+                        <i class="fas fa-plus-circle fa-3x mb-3" style="color: #3498db;"></i>
+                        <h4 style="color: var(--text-color);">Créez votre serveur</h4>
+                        <p class="muted">En tant que client, vous pouvez configurer un serveur de logs pour votre communauté.</p>
+                    </div>
+                    
+                    <form id="clientCreateServerForm">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() if csrf_token is defined else '' }}">
+                        
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="server_id" class="form-label">
+                                    <i class="fas fa-tag me-1"></i> Identifiant du serveur *
+                                </label>
+                                <input type="text" class="form-control" id="server_id" name="server_id" required
+                                       pattern="[a-z0-9_-]+" placeholder="ex: monserveur"
+                                       style="background: var(--bg-tertiary); border-color: var(--border-color); color: var(--text-color);">
+                                <small class="muted">Lettres minuscules, chiffres, tirets uniquement</small>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="display_name" class="form-label">
+                                    <i class="fas fa-signature me-1"></i> Nom d'affichage *
+                                </label>
+                                <input type="text" class="form-control" id="display_name" name="display_name" required
+                                       placeholder="Mon Serveur RP"
+                                       style="background: var(--bg-tertiary); border-color: var(--border-color); color: var(--text-color);">
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="description" class="form-label">
+                                <i class="fas fa-align-left me-1"></i> Description
+                            </label>
+                            <textarea class="form-control" id="description" name="description" rows="2"
+                                      placeholder="Description de votre serveur"
+                                      style="background: var(--bg-tertiary); border-color: var(--border-color); color: var(--text-color);"></textarea>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="database_uri" class="form-label">
+                                <i class="fas fa-database me-1"></i> URI de la base de données *
+                            </label>
+                            <input type="text" class="form-control" id="database_uri" name="database_uri" required
+                                   placeholder="mysql://user:password@host:3306/database"
+                                   style="background: var(--bg-tertiary); border-color: var(--border-color); color: var(--text-color);">
+                            <small class="muted">Format: mysql://utilisateur:motdepasse@adresse:port/base</small>
+                        </div>
+                        
+                        <hr style="border-color: var(--border-color);">
+                        
+                        <h6 class="mb-3"><i class="fab fa-discord me-2" style="color: #5865F2;"></i> Configuration Discord (optionnel)</h6>
+                        
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="discord_guild_id" class="form-label">ID du serveur Discord</label>
+                                <input type="text" class="form-control" id="discord_guild_id" name="discord_guild_id"
+                                       placeholder="123456789012345678"
+                                       style="background: var(--bg-tertiary); border-color: var(--border-color); color: var(--text-color);">
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="discord_channel_id" class="form-label">ID du salon de logs</label>
+                                <input type="text" class="form-control" id="discord_channel_id" name="discord_channel_id"
+                                       placeholder="123456789012345678"
+                                       style="background: var(--bg-tertiary); border-color: var(--border-color); color: var(--text-color);">
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="discord_role_staff" class="form-label">ID du rôle Staff</label>
+                                <input type="text" class="form-control" id="discord_role_staff" name="discord_role_staff"
+                                       placeholder="ID du rôle pouvant voir les logs"
+                                       style="background: var(--bg-tertiary); border-color: var(--border-color); color: var(--text-color);">
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="discord_role_admin" class="form-label">ID du rôle Admin</label>
+                                <input type="text" class="form-control" id="discord_role_admin" name="discord_role_admin"
+                                       placeholder="ID du rôle admin"
+                                       style="background: var(--bg-tertiary); border-color: var(--border-color); color: var(--text-color);">
+                            </div>
+                        </div>
+                        
+                        <div class="text-center mt-4">
+                            <button type="submit" class="btn-primaryx" style="padding: 12px 30px;">
+                                <i class="fas fa-plus me-2"></i> Créer mon serveur
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            {% endif %}
+        </div>
+        {% endif %}
 
         <div class="section">
             <h2><i class="fas fa-server"></i> Accès aux serveurs</h2>
@@ -67,5 +215,47 @@
     </div>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="{{ url_for('static', filename='js/account.js') }}?v={{ ASSET_VERSION }}"></script>
+    
+    {% if is_client and not client_server %}
+    <script>
+    // Gestion du formulaire de création de serveur client
+    document.getElementById('clientCreateServerForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        const form = e.target;
+        const submitBtn = form.querySelector('button[type="submit"]');
+        const originalText = submitBtn.innerHTML;
+        
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i> Création en cours...';
+        
+        try {
+            const formData = new FormData(form);
+            
+            const response = await fetch('/admin/servers/create', {
+                method: 'POST',
+                body: formData
+            });
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                // Afficher un message de succès
+                alert('Serveur créé avec succès ! La page va se recharger.');
+                window.location.reload();
+            } else {
+                alert('Erreur: ' + (data.error || 'Une erreur est survenue'));
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = originalText;
+            }
+        } catch (error) {
+            console.error('Erreur:', error);
+            alert('Erreur de connexion. Veuillez réessayer.');
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = originalText;
+        }
+    });
+    </script>
+    {% endif %}
 </body>
 </html>

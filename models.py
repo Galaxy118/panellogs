@@ -141,6 +141,7 @@ class ServerConfig:
             'logo': config_data.get('logo', f'/static/logos/{server_id}.png'),
             'status': 'offline',
             'database_uri': config_data.get('database_uri', ''),
+            'owner_id': config_data.get('owner_id', ''),  # ID Discord du propriétaire (pour les clients)
             'discord': {
                 'client_id': config_data.get('discord', {}).get('client_id', ''),
                 'client_secret': config_data.get('discord', {}).get('client_secret', ''),

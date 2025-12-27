@@ -392,6 +392,45 @@ def _get_super_admin_ids():
 def is_super_admin_id(user_id):
     return str(user_id) in _get_super_admin_ids()
 
+# Configuration Panel Client - Permet à des utilisateurs avec un rôle spécifique de créer leurs serveurs
+CLIENT_DISCORD_GUILD_ID = os.getenv('CLIENT_DISCORD_GUILD_ID', '')
+CLIENT_DISCORD_ROLE_ID = os.getenv('CLIENT_DISCORD_ROLE_ID', '')
+
+def is_client_enabled():
+    """Vérifie si le panel client est configuré"""
+    return bool(CLIENT_DISCORD_GUILD_ID and CLIENT_DISCORD_ROLE_ID)
+
+def check_client_role(user_id):
+    """
+    Vérifie si un utilisateur a le rôle client sur le serveur Discord configuré.
+    Retourne True si l'utilisateur peut créer des serveurs.
+    """
+    if not is_client_enabled():
+        return False
+    
+    if not DISCORD_BOT_TOKEN:
+        return False
+    
+    try:
+        # Vérifier via l'API Discord
+        url = f"https://discord.com/api/guilds/{CLIENT_DISCORD_GUILD_ID}/members/{user_id}"
+        headers = {"Authorization": f"Bot {DISCORD_BOT_TOKEN}"}
+        res = requests.get(url, headers=headers, timeout=10)
+        
+        if res.status_code == 200:
+            member = res.json()
+            roles = [str(r) for r in member.get('roles', [])]
+            return str(CLIENT_DISCORD_ROLE_ID) in roles
+        elif res.status_code == 404:
+            # L'utilisateur n'est pas sur le serveur
+            return False
+        else:
+            print(f"[WARNING] Discord API a renvoyé {res.status_code} pour client check")
+            return False
+    except Exception as e:
+        print(f"[ERROR] Erreur lors de la vérification du rôle client: {e}")
+        return False
+
 # Validation et diagnostics de configuration Discord
 import base64
 
@@ -773,7 +812,9 @@ def get_user_server_permissions(user_id):
     permissions = {
         'accessible_servers': [],
         'admin_servers': [],
-        'is_super_admin': False
+        'owned_servers': [],  # Serveurs créés par ce client
+        'is_super_admin': False,
+        'is_client': False  # Peut créer des serveurs
     }
     
     # Vérifier si super admin
@@ -781,13 +822,26 @@ def get_user_server_permissions(user_id):
         permissions['is_super_admin'] = True
         permissions['accessible_servers'] = 'all'
         permissions['admin_servers'] = 'all'
+        permissions['owned_servers'] = 'all'
         return permissions
+    
+    # Vérifier si l'utilisateur est un client (peut créer des serveurs)
+    if check_client_role(user_id):
+        permissions['is_client'] = True
     
     # Vérifier les permissions pour chaque serveur
     for server_id in server_config.get_server_list():
         server_conf = get_server_config(server_id)
         if not server_conf:
             continue
+        
+        # Vérifier si l'utilisateur est propriétaire du serveur
+        owner_id = str(server_conf.get('owner_id', '') or '')
+        if owner_id and owner_id == str(user_id):
+            permissions['owned_servers'].append(server_id)
+            permissions['accessible_servers'].append(server_id)
+            permissions['admin_servers'].append(server_id)
+            continue  # Pas besoin de vérifier les rôles, il est propriétaire
         
         roles = get_discord_member_roles(server_conf, user_id)
         if not roles:
@@ -1626,6 +1680,18 @@ def account():
 
     admin_servers = perms.get('admin_servers', [])
     is_super_admin = perms.get('is_super_admin', False)
+    is_client = perms.get('is_client', False)
+    owned_servers = perms.get('owned_servers', [])
+    
+    # Pour les clients, récupérer les infos de leur serveur s'ils en ont un
+    client_server = None
+    if is_client and owned_servers and len(owned_servers) > 0:
+        server_id = owned_servers[0]
+        client_server = {
+            'id': server_id,
+            'config': server_config.get_server(server_id),
+            'status': servers_status.get(server_id, {})
+        }
 
     return render_template(
         'account.html',
@@ -1634,7 +1700,10 @@ def account():
         servers_status=servers_status,
         accessible_servers=accessible_servers,
         admin_servers=admin_servers,
-        is_super_admin=is_super_admin
+        is_super_admin=is_super_admin,
+        is_client=is_client,
+        owned_servers=owned_servers,
+        client_server=client_server
     )
 
 from urllib.parse import quote
@@ -2024,8 +2093,9 @@ def admin_servers():
     user_permissions = request.user_data['permissions']
     user_id = request.user_data['user_id']
     
-    # Vérifier si l'utilisateur est super-admin
+    # Vérifier si l'utilisateur est super-admin ou client
     is_super_admin = user_permissions.get('is_super_admin', False)
+    is_client = user_permissions.get('is_client', False)
     
     if is_super_admin:
         # Super-admin a accès à tous les serveurs
@@ -2034,17 +2104,29 @@ def admin_servers():
         # Filtrer selon les permissions admin de l'utilisateur
         user_admin_servers = {}
         all_servers = server_config.get_all_servers()
-        admin_servers = user_permissions.get('admin_servers', [])
+        admin_servers_list = user_permissions.get('admin_servers', [])
+        owned_servers = user_permissions.get('owned_servers', [])
         
-        if admin_servers == 'all':
+        if admin_servers_list == 'all':
             user_admin_servers = all_servers
-        elif isinstance(admin_servers, list):
-            for server_id in admin_servers:
-                if server_id in all_servers:
-                    user_admin_servers[server_id] = all_servers[server_id]
+        else:
+            # Ajouter les serveurs où l'utilisateur est admin
+            if isinstance(admin_servers_list, list):
+                for server_id in admin_servers_list:
+                    if server_id in all_servers:
+                        user_admin_servers[server_id] = all_servers[server_id]
+            
+            # Ajouter les serveurs dont l'utilisateur est propriétaire
+            if isinstance(owned_servers, list):
+                for server_id in owned_servers:
+                    if server_id in all_servers and server_id not in user_admin_servers:
+                        user_admin_servers[server_id] = all_servers[server_id]
     
     # Si l'utilisateur n'est admin d'aucun serveur, rediriger
+    # Les clients sans serveur sont redirigés vers leur page compte pour en créer un
     if not user_admin_servers and not is_super_admin:
+        if is_client:
+            return redirect(url_for('account'))  # Rediriger les clients vers leur page compte
         abort(403)
     
     # Permettre le cache mais avec option de forcer le rafraîchissement via paramètre URL
@@ -2208,14 +2290,23 @@ def refresh_server_logo(server_id):
 @app.route('/admin/servers/create', methods=['POST'])
 @require_auth(admin_required=True)
 def create_server():
-    """Créer un nouveau serveur (SUPER_ADMIN uniquement)"""
+    """Créer un nouveau serveur (SUPER_ADMIN ou Client autorisé - limité à 1 serveur pour les clients)"""
     
     user_id = request.user_data['user_id']
     user_permissions = request.user_data['permissions']
     
-    # Vérifier que l'utilisateur est SUPER_ADMIN
-    if not user_permissions.get('is_super_admin', False):
-        return jsonify({'error': 'Accès refusé. Seul le SUPER_ADMIN peut créer des serveurs.'}), 403
+    # Vérifier que l'utilisateur est SUPER_ADMIN ou Client autorisé
+    is_super_admin = user_permissions.get('is_super_admin', False)
+    is_client = user_permissions.get('is_client', False)
+    
+    if not is_super_admin and not is_client:
+        return jsonify({'error': 'Accès refusé. Vous devez être Super Admin ou Client autorisé pour créer des serveurs.'}), 403
+    
+    # Limiter les clients à 1 seul serveur
+    if is_client and not is_super_admin:
+        owned_servers = user_permissions.get('owned_servers', [])
+        if owned_servers and len(owned_servers) > 0:
+            return jsonify({'error': 'Vous avez déjà un serveur. Les clients ne peuvent créer qu\'un seul serveur.'}), 403
     
     try:
         # Récupérer les données du formulaire
@@ -2244,6 +2335,10 @@ def create_server():
                 'channel_id': request.form.get('discord_channel_id', '').strip()
             }
         }
+        
+        # Si c'est un client (pas super admin), ajouter le owner_id pour lier le serveur
+        if is_client and not is_super_admin:
+            config_data['owner_id'] = str(user_id)
         
         # Créer le serveur
         server_config.create_server(server_id, config_data)
@@ -2282,24 +2377,29 @@ def create_server():
 @app.route('/admin/servers/<server_id>/delete', methods=['POST'])
 @require_auth(admin_required=True)
 def delete_server(server_id):
-    """Supprimer un serveur (SUPER_ADMIN uniquement)"""
+    """Supprimer un serveur (SUPER_ADMIN ou propriétaire du serveur)"""
     
     user_id = request.user_data['user_id']
     user_permissions = request.user_data['permissions']
     
-    # Vérifier que l'utilisateur est SUPER_ADMIN
-    if not user_permissions.get('is_super_admin', False):
-        return jsonify({'error': 'Accès refusé. Seul le SUPER_ADMIN peut supprimer des serveurs.'}), 403
+    # Vérifier que le serveur existe
+    if not server_config.is_valid_server(server_id):
+        return jsonify({'error': f'Le serveur {server_id} n\'existe pas'}), 404
+    
+    # Récupérer les infos du serveur
+    server_conf = server_config.get_server(server_id)
+    server_name = server_conf.get('display_name', server_id) if server_conf else server_id
+    channel_id = server_conf.get('discord', {}).get('channel_id') if server_conf else None
+    owner_id = str(server_conf.get('owner_id', '') or '') if server_conf else ''
+    
+    # Vérifier les permissions: SUPER_ADMIN ou propriétaire du serveur
+    is_super_admin = user_permissions.get('is_super_admin', False)
+    is_owner = owner_id and owner_id == str(user_id)
+    
+    if not is_super_admin and not is_owner:
+        return jsonify({'error': 'Accès refusé. Vous devez être Super Admin ou propriétaire du serveur.'}), 403
     
     try:
-        # Vérifier que le serveur existe
-        if not server_config.is_valid_server(server_id):
-            return jsonify({'error': f'Le serveur {server_id} n\'existe pas'}), 404
-        
-        # Récupérer les infos du serveur avant suppression
-        server_conf = server_config.get_server(server_id)
-        server_name = server_conf.get('display_name', server_id) if server_conf else server_id
-        channel_id = server_conf.get('discord', {}).get('channel_id') if server_conf else None
         
         # Supprimer le serveur
         server_config.delete_server(server_id)
